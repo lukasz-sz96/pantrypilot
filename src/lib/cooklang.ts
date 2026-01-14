@@ -12,6 +12,7 @@ export interface ParsedRecipe {
   title: string
   ingredients: ParsedIngredient[]
   steps: string[]
+  servings?: number
 }
 
 const parser = new Parser()
@@ -63,6 +64,19 @@ export function parseCooklang(source: string): ParsedRecipe {
   const recipe = result.recipe
 
   const title = result.metadata?.title || ""
+
+  // Extract servings from metadata
+  let servings: number | undefined
+  if (result.metadata?.servings) {
+    // servings might be a number or string depending on the parser version
+    const servingsValue = result.metadata.servings
+    const parsed = typeof servingsValue === 'number'
+      ? servingsValue
+      : parseInt(String(servingsValue))
+    if (!isNaN(parsed) && parsed > 0) {
+      servings = parsed
+    }
+  }
 
   const ingredientMap = new Map<string, ParsedIngredient>()
   if (recipe.ingredients) {
@@ -131,7 +145,7 @@ export function parseCooklang(source: string): ParsedRecipe {
     }
   }
 
-  return { title, ingredients, steps }
+  return { title, ingredients, steps, servings }
 }
 
 export function ingredientToText(ing: ParsedIngredient): string {

@@ -428,6 +428,7 @@ const RecipePreviewModal = ({
           ingredientId: ingredientIds[i],
         })),
         parsedSteps: parsed.steps,
+        servings: parsed.servings,
       })
 
       onClose()

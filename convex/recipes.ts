@@ -245,6 +245,7 @@ export const importFromUrl = action({
   returns: v.object({
     cooklangSource: v.string(),
     title: v.string(),
+    servings: v.optional(v.number()),
   }),
   handler: async (_ctx, args) => {
     let parsedUrl: URL
@@ -271,9 +272,18 @@ export const importFromUrl = action({
 
       if (response.ok) {
         const result = await response.json()
+        // Parse servings from the result if available
+        let servings: number | undefined
+        if (result.servings) {
+          const parsed = parseInt(String(result.servings))
+          if (!isNaN(parsed) && parsed > 0) {
+            servings = parsed
+          }
+        }
         return {
           cooklangSource: result.cooklang,
           title: result.title || "Imported Recipe",
+          servings,
         }
       }
     } catch {
@@ -305,7 +315,17 @@ export const importFromUrl = action({
     const cooklangSource = recipeSchemaTooCooklang(recipeSchema)
     const title = recipeSchema.name
 
-    return { cooklangSource, title }
+    // Parse servings from recipeYield
+    let servings: number | undefined
+    if (recipeSchema.recipeYield) {
+      const yieldStr = String(recipeSchema.recipeYield)
+      const parsed = parseInt(yieldStr)
+      if (!isNaN(parsed) && parsed > 0) {
+        servings = parsed
+      }
+    }
+
+    return { cooklangSource, title, servings }
   },
 })
 
