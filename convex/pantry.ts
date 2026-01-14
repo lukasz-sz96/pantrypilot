@@ -22,12 +22,15 @@ export const list = query({
   ),
   handler: async (ctx) => {
     const items = await ctx.db.query("pantryItems").collect()
+    const ingredients = await Promise.all(
+      items.map((item) => ctx.db.get(item.ingredientId))
+    )
     const result = []
-    for (const item of items) {
-      const ingredient = await ctx.db.get(item.ingredientId)
+    for (let i = 0; i < items.length; i++) {
+      const ingredient = ingredients[i]
       if (ingredient) {
         result.push({
-          ...item,
+          ...items[i],
           ingredient: {
             _id: ingredient._id,
             name: ingredient.name,
@@ -51,6 +54,16 @@ export const upsert = mutation({
   },
   returns: v.id("pantryItems"),
   handler: async (ctx, args) => {
+    if (args.quantity < 0) {
+      throw new Error("Quantity cannot be negative")
+    }
+    if (!args.unit.trim()) {
+      throw new Error("Unit cannot be empty")
+    }
+    const ingredient = await ctx.db.get(args.ingredientId)
+    if (!ingredient) {
+      throw new Error("Ingredient not found")
+    }
     const existing = await ctx.db
       .query("pantryItems")
       .withIndex("by_ingredient", (q) => q.eq("ingredientId", args.ingredientId))
@@ -91,6 +104,10 @@ export const remove = mutation({
   args: { id: v.id("pantryItems") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id)
+    if (!existing) {
+      throw new Error("Pantry item not found")
+    }
     await ctx.db.delete(args.id)
     return null
   },

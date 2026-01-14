@@ -7,6 +7,7 @@ import {
 import type { QueryClient } from '@tanstack/react-query'
 import appCss from '~/styles/app.css?url'
 import { Navigation } from '~/components/Navigation'
+import { AppInitializer } from '~/components/AppInitializer'
 
 const RootDocument = ({ children }: { children: React.ReactNode }) => (
   <html>
@@ -22,6 +23,7 @@ const RootDocument = ({ children }: { children: React.ReactNode }) => (
 
 const RootComponent = () => (
   <RootDocument>
+    <AppInitializer />
     <main className="main-content">
       <Outlet />
     </main>

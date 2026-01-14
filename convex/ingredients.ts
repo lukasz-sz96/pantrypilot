@@ -26,11 +26,20 @@ export const search = query({
   handler: async (ctx, args) => {
     const normalized = args.query.toLowerCase().trim()
     if (!normalized) return []
+    const byName = await ctx.db
+      .query("ingredients")
+      .withIndex("by_normalizedName", (q) =>
+        q.gte("normalizedName", normalized).lt("normalizedName", normalized + "\uffff")
+      )
+      .collect()
+    const byNameIds = new Set(byName.map((i) => i._id))
     const all = await ctx.db.query("ingredients").collect()
-    return all.filter((i) =>
-      i.normalizedName.includes(normalized) ||
-      (i.aliases && i.aliases.some((a) => a.toLowerCase().includes(normalized)))
+    const byAlias = all.filter(
+      (i) =>
+        !byNameIds.has(i._id) &&
+        i.aliases?.some((a) => a.toLowerCase().includes(normalized))
     )
+    return [...byName, ...byAlias]
   },
 })
 
@@ -58,9 +67,13 @@ export const create = mutation({
   },
   returns: v.id("ingredients"),
   handler: async (ctx, args) => {
-    const normalizedName = args.name.toLowerCase().trim()
+    const trimmedName = args.name.trim()
+    if (!trimmedName) {
+      throw new Error("Ingredient name cannot be empty")
+    }
+    const normalizedName = trimmedName.toLowerCase()
     return await ctx.db.insert("ingredients", {
-      name: args.name,
+      name: trimmedName,
       normalizedName,
       aliases: args.aliases ?? [],
       category: args.category,
@@ -81,6 +94,10 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id)
+    if (!existing) {
+      throw new Error("Ingredient not found")
+    }
     const { id, ...updates } = args
     const patch: Record<string, unknown> = {}
     if (updates.name !== undefined) {
@@ -91,7 +108,9 @@ export const update = mutation({
     if (updates.category !== undefined) patch.category = updates.category
     if (updates.isStaple !== undefined) patch.isStaple = updates.isStaple
     if (updates.defaultUnit !== undefined) patch.defaultUnit = updates.defaultUnit
-    await ctx.db.patch(id, patch)
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(id, patch)
+    }
     return null
   },
 })
@@ -120,6 +139,10 @@ export const remove = mutation({
   args: { id: v.id("ingredients") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id)
+    if (!existing) {
+      throw new Error("Ingredient not found")
+    }
     await ctx.db.delete(args.id)
     return null
   },

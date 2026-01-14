@@ -58,6 +58,12 @@ export const addItems = mutation({
     const list = await ctx.db.get(args.id)
     if (!list) throw new Error("Shopping list not found")
 
+    for (const item of args.items) {
+      if (item.quantity < 0) {
+        throw new Error("Quantity cannot be negative")
+      }
+    }
+
     const newItems = args.items.map((item) => ({
       ...item,
       checked: false,
@@ -80,12 +86,15 @@ export const toggleItem = mutation({
     const list = await ctx.db.get(args.listId)
     if (!list) throw new Error("Shopping list not found")
 
+    const index = Math.floor(args.itemIndex)
+    if (index < 0 || index >= list.items.length) {
+      throw new Error("Invalid item index")
+    }
+
     const items = [...list.items]
-    if (args.itemIndex >= 0 && args.itemIndex < items.length) {
-      items[args.itemIndex] = {
-        ...items[args.itemIndex],
-        checked: !items[args.itemIndex].checked,
-      }
+    items[index] = {
+      ...items[index],
+      checked: !items[index].checked,
     }
 
     await ctx.db.patch(args.listId, { items })
@@ -103,7 +112,12 @@ export const removeItem = mutation({
     const list = await ctx.db.get(args.listId)
     if (!list) throw new Error("Shopping list not found")
 
-    const items = list.items.filter((_, i) => i !== args.itemIndex)
+    const index = Math.floor(args.itemIndex)
+    if (index < 0 || index >= list.items.length) {
+      throw new Error("Invalid item index")
+    }
+
+    const items = list.items.filter((_, i) => i !== index)
     await ctx.db.patch(args.listId, { items })
     return null
   },
@@ -113,6 +127,10 @@ export const remove = mutation({
   args: { id: v.id("shoppingLists") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id)
+    if (!existing) {
+      throw new Error("Shopping list not found")
+    }
     await ctx.db.delete(args.id)
     return null
   },

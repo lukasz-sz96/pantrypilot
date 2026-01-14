@@ -211,17 +211,6 @@ const ManualRecipeForm = ({
       .filter(Boolean)
       .map((line) => parseIngredientLine(line))
 
-    // Generate cooklang with proper syntax
-    const ingredientLines = parsedIngredients.map((ing) => {
-      if (ing.quantity && ing.unit) {
-        return `@${ing.name}{${ing.quantity}%${ing.unit}}`
-      } else if (ing.quantity) {
-        return `@${ing.name}{${ing.quantity}}`
-      } else {
-        return `@${ing.name}{}`
-      }
-    })
-
     const stepLines = steps
       .split('\n')
       .map((line) => line.trim())

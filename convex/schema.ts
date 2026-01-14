@@ -9,7 +9,9 @@ export default defineSchema({
     category: v.string(),
     isStaple: v.boolean(),
     defaultUnit: v.string(),
-  }).index("by_normalizedName", ["normalizedName"]),
+  })
+    .index("by_normalizedName", ["normalizedName"])
+    .index("by_category", ["category"]),
 
   pantryItems: defineTable({
     ingredientId: v.id("ingredients"),
@@ -30,7 +32,7 @@ export default defineSchema({
       })
     ),
     parsedSteps: v.array(v.string()),
-  }),
+  }).index("by_title", ["title"]),
 
   shoppingLists: defineTable({
     name: v.string(),

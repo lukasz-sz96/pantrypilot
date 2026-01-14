@@ -64,13 +64,19 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id)
+    if (!existing) {
+      throw new Error("Recipe not found")
+    }
     const { id, ...updates } = args
     const patch: Record<string, unknown> = {}
     if (updates.title !== undefined) patch.title = updates.title
     if (updates.cooklangSource !== undefined) patch.cooklangSource = updates.cooklangSource
     if (updates.parsedIngredients !== undefined) patch.parsedIngredients = updates.parsedIngredients
     if (updates.parsedSteps !== undefined) patch.parsedSteps = updates.parsedSteps
-    await ctx.db.patch(id, patch)
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(id, patch)
+    }
     return null
   },
 })
@@ -79,6 +85,10 @@ export const remove = mutation({
   args: { id: v.id("recipes") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id)
+    if (!existing) {
+      throw new Error("Recipe not found")
+    }
     await ctx.db.delete(args.id)
     return null
   },
@@ -232,12 +242,27 @@ export const importFromUrl = action({
     title: v.string(),
   }),
   handler: async (_ctx, args) => {
+    let parsedUrl: URL
     try {
+      parsedUrl = new URL(args.url)
+    } catch {
+      throw new Error("Invalid URL provided")
+    }
+
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      throw new Error("URL must use http or https protocol")
+    }
+
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 30000)
       const response = await fetch(`${COOKLANG_IMPORT_URL}/import/url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: args.url }),
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
 
       if (response.ok) {
         const result = await response.json()
@@ -250,12 +275,16 @@ export const importFromUrl = action({
       // Fall back to JSON-LD extraction
     }
 
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30000)
     const response = await fetch(args.url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; PantryPilot/1.0)",
         Accept: "text/html",
       },
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
 
     if (!response.ok) {
       throw new Error(`Failed to fetch recipe: ${response.statusText}`)
@@ -287,6 +316,11 @@ export const markCooked = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    for (const deduction of args.deductions) {
+      if (deduction.quantity < 0) {
+        throw new Error("Deduction quantity cannot be negative")
+      }
+    }
     for (const deduction of args.deductions) {
       const item = await ctx.db.get(deduction.pantryItemId)
       if (item) {

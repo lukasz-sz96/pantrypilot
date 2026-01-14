@@ -15,21 +15,27 @@ export const seedStaples = mutation({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    const existing = await ctx.db.query("ingredients").collect()
-    if (existing.length > 0) {
+    const existingStaples = await ctx.db
+      .query("ingredients")
+      .filter((q) => q.eq(q.field("isStaple"), true))
+      .collect()
+
+    if (existingStaples.length > 0) {
       return 0
     }
 
-    for (const staple of DEFAULT_STAPLES) {
-      await ctx.db.insert("ingredients", {
-        name: staple.name,
-        normalizedName: staple.name.toLowerCase().trim(),
-        aliases: staple.aliases,
-        category: staple.category,
-        isStaple: true,
-        defaultUnit: staple.defaultUnit,
-      })
-    }
+    await Promise.all(
+      DEFAULT_STAPLES.map((staple) =>
+        ctx.db.insert("ingredients", {
+          name: staple.name,
+          normalizedName: staple.name.toLowerCase().trim(),
+          aliases: staple.aliases,
+          category: staple.category,
+          isStaple: true,
+          defaultUnit: staple.defaultUnit,
+        })
+      )
+    )
 
     return DEFAULT_STAPLES.length
   },

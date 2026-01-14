@@ -63,25 +63,31 @@ export function parseCooklang(source: string): ParsedRecipe {
 
   const title = result.metadata?.title || ""
 
-  const ingredients: ParsedIngredient[] = []
+  const ingredientMap = new Map<string, ParsedIngredient>()
   if (recipe.ingredients) {
     for (const ing of recipe.ingredients) {
       const extracted = extractQuantityValue(ing.quantity)
-      // Clean up ingredient name - remove leading "/" or other artifacts
       let name = ing.name || ''
       if (name.startsWith('/')) {
         name = name.slice(1).trim()
       }
-      // Ensure quantity is a number, not an object
       const quantity = typeof extracted.quantity === 'number' ? extracted.quantity : undefined
       const unit = typeof extracted.unit === 'string' ? extracted.unit : undefined
-      ingredients.push({
-        originalText: name,
-        quantity,
-        unit,
-      })
+      const normalizedName = name.toLowerCase().trim()
+
+      const existing = ingredientMap.get(normalizedName)
+      if (existing && quantity && existing.quantity && existing.unit === unit) {
+        existing.quantity += quantity
+      } else if (!existing) {
+        ingredientMap.set(normalizedName, {
+          originalText: name,
+          quantity,
+          unit,
+        })
+      }
     }
   }
+  const ingredients = Array.from(ingredientMap.values())
 
   const steps: string[] = []
   if (recipe.sections) {
@@ -190,7 +196,7 @@ export function parseIngredientLine(text: string): {
 // Generate cooklang source from parsed ingredients and steps
 export function generateCooklang(
   title: string,
-  ingredients: { name: string; quantity?: number; unit?: string }[],
+  _ingredients: { name: string; quantity?: number; unit?: string }[],
   steps: string[]
 ): string {
   const lines: string[] = []
@@ -298,16 +304,16 @@ function parseIngredientText(text: string): {
   quantity?: string
   unit?: string
 } {
-  // Clean up common patterns first
   let cleaned = text
-    .replace(/\s*,?\s*\([^)]*note[^)]*\)/gi, '') // Remove (Note X) references
-    .replace(/\s*,?\s*\([^)]*weight[^)]*\)/gi, '') // Remove weight notes
-    .replace(/\s*\(optional\)/gi, '') // Remove (optional)
+    .replace(/\s*,?\s*\([^)]*note[^)]*\)/gi, '')
+    .replace(/\s*,?\s*\([^)]*weight[^)]*\)/gi, '')
+    .replace(/\s*\(optional\)/gi, '')
+    .replace(/\s*\(see.*?\)/gi, '')
+    .replace(/\s*\(about.*?\)/gi, '')
     .trim()
 
-  // Try to parse "6 oz guanciale" or "2 cups flour" etc.
   const match = cleaned.match(
-    /^([\d./½¼¾⅓⅔⅛]+)\s*(cups?|tbsps?|tsps?|teaspoons?|tablespoons?|ounces?|oz|pounds?|lbs?|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|cloves?|cans?|packages?|pieces?|large|medium|small)\s+(.+)$/i
+    /^([\d./½¼¾⅓⅔⅛\s-]+)\s*(cups?|tbsps?|tsps?|teaspoons?|tablespoons?|ounces?|oz|pounds?|lbs?|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|cloves?|cans?|packages?|pieces?|large|medium|small|whole|bunch(?:es)?|heads?|stalks?|sprigs?|pinch(?:es)?)\s+(.+)$/i
   )
 
   if (match) {
@@ -315,18 +321,22 @@ function parseIngredientText(text: string): {
     const unit = match[2]?.toLowerCase()
     let name = match[3]?.trim() || ''
 
-    // Extract main ingredient from alternatives like "guanciale (pancetta or block bacon)"
-    // Keep just the first/main ingredient name
-    const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute)[^)]*\))?/i)
+    const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i)
     if (altMatch && altMatch[1]) {
       name = altMatch[1].trim()
     }
 
-    // Clean up any remaining issues
     name = name
-      .replace(/\s*,\s*$/, '') // Remove trailing comma
-      .replace(/\s*,\s*finely.*$/i, '') // Remove ", finely chopped" etc
-      .replace(/\s*,\s*freshly.*$/i, '') // Remove ", freshly ground" etc
+      .replace(/\s*,\s*$/, '')
+      .replace(/\s*,\s*finely.*$/i, '')
+      .replace(/\s*,\s*freshly.*$/i, '')
+      .replace(/\s*,\s*thinly.*$/i, '')
+      .replace(/\s*,\s*roughly.*$/i, '')
+      .replace(/\s*,\s*coarsely.*$/i, '')
+      .replace(/\s*,\s*diced$/i, '')
+      .replace(/\s*,\s*chopped$/i, '')
+      .replace(/\s*,\s*minced$/i, '')
+      .replace(/\s*,\s*sliced$/i, '')
       .trim()
 
     if (name) {
@@ -334,11 +344,10 @@ function parseIngredientText(text: string): {
     }
   }
 
-  // Fallback: try without unit (e.g., "2 eggs")
-  const simpleMatch = cleaned.match(/^([\d./½¼¾⅓⅔⅛]+)\s+(.+)$/i)
+  const simpleMatch = cleaned.match(/^([\d./½¼¾⅓⅔⅛\s-]+)\s+(.+)$/i)
   if (simpleMatch) {
     let name = simpleMatch[2].trim()
-    const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute)[^)]*\))?/i)
+    const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i)
     if (altMatch && altMatch[1]) {
       name = altMatch[1].trim()
     }
@@ -348,13 +357,8 @@ function parseIngredientText(text: string): {
     }
   }
 
-  // Final fallback: just clean the name
-  let name = cleaned
-    .replace(/\s*,\s*$/, '')
-    .trim()
-
-  // Try to extract main ingredient from alternatives
-  const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute)[^)]*\))?/i)
+  let name = cleaned.replace(/\s*,\s*$/, '').trim()
+  const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i)
   if (altMatch && altMatch[1]) {
     name = altMatch[1].trim()
   }

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useState } from 'react'
@@ -13,6 +13,8 @@ const RecipeDetail = () => {
   const allIngredients = useQuery(api.ingredients.list)
   const [currentStep, setCurrentStep] = useState(0)
   const [showCookMode, setShowCookMode] = useState(false)
+  const [showMarkCooked, setShowMarkCooked] = useState(false)
+  const [showAddToList, setShowAddToList] = useState(false)
 
   if (recipe === undefined) {
     return (
@@ -68,6 +70,38 @@ const RecipeDetail = () => {
   ).length
   const totalLinked = ingredientsWithStatus.filter((i) => i.ingredientId).length
 
+  if (showAddToList && pantryItems) {
+    const missingIngredients = ingredientsWithStatus.filter(
+      (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty')
+    )
+    return (
+      <AddToShoppingListModal
+        recipeTitle={recipe.title}
+        missingIngredients={missingIngredients}
+        onClose={() => setShowAddToList(false)}
+      />
+    )
+  }
+
+  if (showMarkCooked && pantryItems) {
+    return (
+      <MarkAsCookedModal
+        recipe={recipe}
+        pantryItems={pantryItems}
+        onClose={() => {
+          setShowMarkCooked(false)
+          setShowCookMode(false)
+          setCurrentStep(0)
+        }}
+        onSkip={() => {
+          setShowMarkCooked(false)
+          setShowCookMode(false)
+          setCurrentStep(0)
+        }}
+      />
+    )
+  }
+
   if (showCookMode) {
     return (
       <CookModeView
@@ -75,6 +109,7 @@ const RecipeDetail = () => {
         currentStep={currentStep}
         setCurrentStep={setCurrentStep}
         onExit={() => setShowCookMode(false)}
+        onFinish={() => setShowMarkCooked(true)}
       />
     )
   }
@@ -191,19 +226,31 @@ const RecipeDetail = () => {
         </section>
 
         {/* Action buttons */}
-        <div className="flex gap-3 pt-4">
-          <button
-            onClick={() => setShowCookMode(true)}
-            className="flex-1 btn-primary"
-          >
-            Start Cooking
-          </button>
-          <Link
-            to="/recipes"
-            className="px-6 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10 transition-colors"
-          >
-            Back
-          </Link>
+        <div className="flex flex-col gap-3 pt-4">
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowCookMode(true)}
+              className="flex-1 btn-primary"
+            >
+              Start Cooking
+            </button>
+            <Link
+              to="/recipes"
+              className="px-6 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10 transition-colors"
+            >
+              Back
+            </Link>
+          </div>
+          {ingredientsWithStatus.some(
+            (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty')
+          ) && (
+            <button
+              onClick={() => setShowAddToList(true)}
+              className="w-full py-3 rounded-xl border border-terracotta text-terracotta hover:bg-terracotta/10 transition-colors"
+            >
+              Add Missing to Shopping List
+            </button>
+          )}
         </div>
       </div>
     </>
@@ -216,6 +263,7 @@ const CookModeView = ({
   currentStep,
   setCurrentStep,
   onExit,
+  onFinish,
 }: {
   recipe: {
     title: string
@@ -225,6 +273,7 @@ const CookModeView = ({
   currentStep: number
   setCurrentStep: (step: number) => void
   onExit: () => void
+  onFinish: () => void
 }) => {
   const totalSteps = recipe.parsedSteps.length
   const isLastStep = currentStep === totalSteps - 1
@@ -254,7 +303,6 @@ const CookModeView = ({
       </div>
 
       <div className="px-4 py-6 space-y-4">
-        {/* Progress bar */}
         <div className="flex gap-1">
           {recipe.parsedSteps.map((_, idx) => (
             <button
@@ -271,7 +319,6 @@ const CookModeView = ({
           ))}
         </div>
 
-        {/* Navigation */}
         <div className="flex gap-3">
           <button
             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
@@ -282,7 +329,7 @@ const CookModeView = ({
           </button>
           {isLastStep ? (
             <button
-              onClick={onExit}
+              onClick={onFinish}
               className="flex-1 py-4 rounded-xl bg-sage text-espresso font-medium hover:bg-sage/90 transition-colors"
             >
               Done!
@@ -295,6 +342,394 @@ const CookModeView = ({
               Next
             </button>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type PantryItem = {
+  _id: Id<'pantryItems'>
+  ingredientId: Id<'ingredients'>
+  quantity: number
+  unit: string
+  ingredient: { _id: Id<'ingredients'>; name: string }
+}
+
+type MissingIngredient = {
+  ingredientId?: Id<'ingredients'>
+  originalText: string
+  quantity?: number
+  unit?: string
+  status: string
+  linkedName?: string | null
+}
+
+const AddToShoppingListModal = ({
+  recipeTitle,
+  missingIngredients,
+  onClose,
+}: {
+  recipeTitle: string
+  missingIngredients: MissingIngredient[]
+  onClose: () => void
+}) => {
+  const lists = useQuery(api.shoppingLists.list)
+  const createList = useMutation(api.shoppingLists.create)
+  const addItems = useMutation(api.shoppingLists.addItems)
+  const allIngredients = useQuery(api.ingredients.list)
+
+  const [selectedListId, setSelectedListId] = useState<Id<'shoppingLists'> | 'new' | null>(null)
+  const [newListName, setNewListName] = useState('')
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(() => {
+    return new Set(missingIngredients.map((_, idx) => String(idx)))
+  })
+  const [saving, setSaving] = useState(false)
+
+  const getIngredientName = (ingredientId?: Id<'ingredients'>) => {
+    if (!ingredientId || !allIngredients) return null
+    return allIngredients.find((i) => i._id === ingredientId)?.name
+  }
+
+  const toggleItem = (idx: number) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(String(idx))) {
+        next.delete(String(idx))
+      } else {
+        next.add(String(idx))
+      }
+      return next
+    })
+  }
+
+  const handleAdd = async () => {
+    if (selectedItems.size === 0) return
+    setSaving(true)
+
+    try {
+      let listId: Id<'shoppingLists'>
+
+      if (selectedListId === 'new') {
+        const name = newListName.trim() || `${recipeTitle} Shopping`
+        listId = await createList({ name })
+      } else if (selectedListId) {
+        listId = selectedListId
+      } else {
+        return
+      }
+
+      const items = missingIngredients
+        .filter((_, idx) => selectedItems.has(String(idx)))
+        .filter((ing) => ing.ingredientId)
+        .map((ing) => ({
+          ingredientId: ing.ingredientId as Id<'ingredients'>,
+          quantity: ing.quantity || 1,
+          unit: ing.unit || 'item',
+        }))
+
+      if (items.length > 0) {
+        await addItems({ id: listId, items })
+      }
+      onClose()
+    } catch (e) {
+      console.error('Failed to add to shopping list:', e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (lists === undefined) {
+    return (
+      <div className="min-h-screen bg-cream flex flex-col">
+        <header className="page-header">
+          <h1 className="page-title">Add to Shopping List</h1>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-pulse text-warmgray">Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-cream flex flex-col">
+      <header className="page-header">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-full bg-cream flex items-center justify-center hover:bg-sage/20 transition-colors"
+          >
+            ←
+          </button>
+          <h1 className="page-title flex-1">Add to Shopping List</h1>
+        </div>
+      </header>
+
+      <div className="flex-1 px-4 py-4 space-y-6">
+        <section>
+          <h2 className="text-lg font-display text-espresso mb-3">Select List</h2>
+          <div className="space-y-2">
+            {lists.map((list) => (
+              <button
+                key={list._id}
+                onClick={() => setSelectedListId(list._id)}
+                className={`w-full p-4 rounded-xl border text-left transition-colors ${
+                  selectedListId === list._id
+                    ? 'border-sage bg-sage/10'
+                    : 'border-warmgray/30 bg-white hover:border-sage/50'
+                }`}
+              >
+                <span className="font-medium text-espresso">{list.name}</span>
+                <span className="text-sm text-warmgray ml-2">
+                  ({list.items.length} items)
+                </span>
+              </button>
+            ))}
+            <button
+              onClick={() => setSelectedListId('new')}
+              className={`w-full p-4 rounded-xl border text-left transition-colors ${
+                selectedListId === 'new'
+                  ? 'border-sage bg-sage/10'
+                  : 'border-warmgray/30 bg-white hover:border-sage/50'
+              }`}
+            >
+              <span className="font-medium text-espresso">+ Create New List</span>
+            </button>
+          </div>
+          {selectedListId === 'new' && (
+            <input
+              type="text"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              placeholder={`${recipeTitle} Shopping`}
+              className="mt-3 w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage"
+              autoFocus
+            />
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-display text-espresso mb-3">
+            Missing Ingredients ({selectedItems.size} selected)
+          </h2>
+          <div className="space-y-2">
+            {missingIngredients.map((ing, idx) => (
+              <button
+                key={idx}
+                onClick={() => toggleItem(idx)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                  selectedItems.has(String(idx))
+                    ? 'border-sage bg-sage/10'
+                    : 'border-warmgray/30 bg-white'
+                }`}
+              >
+                <div
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                    selectedItems.has(String(idx))
+                      ? 'bg-sage border-sage text-white'
+                      : 'border-warmgray/30'
+                  }`}
+                >
+                  {selectedItems.has(String(idx)) && '✓'}
+                </div>
+                <span className="text-espresso text-left flex-1">
+                  {ing.quantity && `${ing.quantity} `}
+                  {ing.unit && `${ing.unit} `}
+                  {getIngredientName(ing.ingredientId as Id<'ingredients'>) || ing.originalText}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="px-4 py-4 border-t border-warmgray/20">
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={saving || !selectedListId || selectedItems.size === 0}
+            className="flex-1 btn-primary disabled:opacity-50"
+          >
+            {saving ? 'Adding...' : `Add ${selectedItems.size} Items`}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const MarkAsCookedModal = ({
+  recipe,
+  pantryItems,
+  onClose,
+  onSkip,
+}: {
+  recipe: {
+    _id: Id<'recipes'>
+    title: string
+    parsedIngredients: {
+      originalText: string
+      quantity?: number
+      unit?: string
+      ingredientId?: Id<'ingredients'>
+    }[]
+  }
+  pantryItems: PantryItem[]
+  onClose: () => void
+  onSkip: () => void
+}) => {
+  const markCooked = useMutation(api.recipes.markCooked)
+  const [saving, setSaving] = useState(false)
+
+  const deductibleIngredients = recipe.parsedIngredients
+    .filter((ing) => ing.ingredientId)
+    .map((ing) => {
+      const pantryItem = pantryItems.find((p) => p.ingredientId === ing.ingredientId)
+      return {
+        ...ing,
+        pantryItem,
+        ingredientName: pantryItem?.ingredient.name || ing.originalText,
+      }
+    })
+    .filter((ing) => ing.pantryItem)
+
+  const [deductions, setDeductions] = useState<Record<string, number>>(() => {
+    const initial: Record<string, number> = {}
+    deductibleIngredients.forEach((ing) => {
+      if (ing.pantryItem) {
+        initial[ing.pantryItem._id] = ing.quantity || 1
+      }
+    })
+    return initial
+  })
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const deductionList = Object.entries(deductions)
+        .filter(([_, qty]) => qty > 0)
+        .map(([pantryItemId, quantity]) => ({
+          pantryItemId: pantryItemId as Id<'pantryItems'>,
+          quantity,
+        }))
+
+      await markCooked({
+        recipeId: recipe._id,
+        deductions: deductionList,
+      })
+      onClose()
+    } catch (e) {
+      console.error('Failed to mark as cooked:', e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (deductibleIngredients.length === 0) {
+    return (
+      <div className="min-h-screen bg-cream flex flex-col">
+        <header className="page-header">
+          <h1 className="page-title">Finished Cooking!</h1>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
+          <p className="text-warmgray text-center mb-6">
+            No ingredients to deduct from pantry.
+          </p>
+          <button onClick={onClose} className="btn-primary">
+            Done
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-cream flex flex-col">
+      <header className="page-header">
+        <h1 className="page-title">Update Pantry</h1>
+      </header>
+
+      <div className="flex-1 px-4 py-4">
+        <p className="text-warmgray mb-4">
+          Deduct these ingredients from your pantry?
+        </p>
+
+        <div className="space-y-3">
+          {deductibleIngredients.map((ing) => {
+            if (!ing.pantryItem) return null
+            const currentDeduction = deductions[ing.pantryItem._id] || 0
+
+            return (
+              <div
+                key={ing.pantryItem._id}
+                className="bg-white rounded-xl p-4 border border-warmgray/20"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-espresso">
+                    {ing.ingredientName}
+                  </span>
+                  <span className="text-sm text-warmgray">
+                    {ing.pantryItem.quantity} {ing.pantryItem.unit} in pantry
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() =>
+                      setDeductions((d) => ({
+                        ...d,
+                        [ing.pantryItem!._id]: Math.max(0, currentDeduction - 1),
+                      }))
+                    }
+                    className="w-10 h-10 rounded-full bg-warmgray/10 flex items-center justify-center text-espresso hover:bg-warmgray/20"
+                  >
+                    −
+                  </button>
+                  <div className="flex-1 text-center">
+                    <span className="text-2xl font-medium text-espresso">
+                      {currentDeduction}
+                    </span>
+                    <span className="text-warmgray ml-1">{ing.unit || ing.pantryItem.unit}</span>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setDeductions((d) => ({
+                        ...d,
+                        [ing.pantryItem!._id]: currentDeduction + 1,
+                      }))
+                    }
+                    className="w-10 h-10 rounded-full bg-warmgray/10 flex items-center justify-center text-espresso hover:bg-warmgray/20"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="px-4 py-4 border-t border-warmgray/20">
+        <div className="flex gap-3">
+          <button
+            onClick={onSkip}
+            className="flex-1 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10"
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 btn-primary disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Update Pantry'}
+          </button>
         </div>
       </div>
     </div>

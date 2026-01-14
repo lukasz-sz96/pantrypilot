@@ -13,7 +13,7 @@ type PantryItem = {
   ingredient: {
     _id: Id<'ingredients'>
     name: string
-    aliases: string[]
+    aliases?: string[]
     category: string
     isStaple: boolean
     defaultUnit: string
