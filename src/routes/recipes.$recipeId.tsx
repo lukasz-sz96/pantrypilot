@@ -22,7 +22,7 @@ const RecipeDetail = () => {
     if (recipe && currentServings === null) {
       setCurrentServings(recipe.servings || 4)
     }
-  }, [recipe, currentServings])
+  }, [recipe])
 
   if (recipe === undefined) {
     return (
@@ -79,7 +79,7 @@ const RecipeDetail = () => {
   const totalLinked = ingredientsWithStatus.filter((i) => i.ingredientId).length
 
   // Calculate scale factor for servings adjustment
-  const baseServings = recipe?.servings || 4
+  const baseServings = Math.max(1, recipe?.servings || 4)
   const scaleFactor = currentServings ? currentServings / baseServings : 1
 
   if (showAddToList && pantryItems) {
@@ -160,6 +160,8 @@ const RecipeDetail = () => {
             onClick={() => setCurrentServings(Math.max(1, (currentServings || baseServings) - 1))}
             disabled={currentServings === 1}
             className="servings-btn"
+            aria-label="Decrease servings"
+            title="Decrease servings"
           >
             −
           </button>
@@ -167,6 +169,8 @@ const RecipeDetail = () => {
           <button
             onClick={() => setCurrentServings((currentServings || baseServings) + 1)}
             className="servings-btn"
+            aria-label="Increase servings"
+            title="Increase servings"
           >
             +
           </button>
