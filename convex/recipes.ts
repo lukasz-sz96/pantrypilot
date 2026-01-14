@@ -16,6 +16,7 @@ const recipeValidator = v.object({
   cooklangSource: v.string(),
   parsedIngredients: v.array(parsedIngredientValidator),
   parsedSteps: v.array(v.string()),
+  servings: v.optional(v.number()),
 })
 
 export const list = query({
@@ -41,6 +42,7 @@ export const save = mutation({
     cooklangSource: v.string(),
     parsedIngredients: v.array(parsedIngredientValidator),
     parsedSteps: v.array(v.string()),
+    servings: v.optional(v.number()),
   },
   returns: v.id("recipes"),
   handler: async (ctx, args) => {
@@ -50,6 +52,7 @@ export const save = mutation({
       cooklangSource: args.cooklangSource,
       parsedIngredients: args.parsedIngredients,
       parsedSteps: args.parsedSteps,
+      servings: args.servings,
     })
   },
 })
@@ -61,6 +64,7 @@ export const update = mutation({
     cooklangSource: v.optional(v.string()),
     parsedIngredients: v.optional(v.array(parsedIngredientValidator)),
     parsedSteps: v.optional(v.array(v.string())),
+    servings: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -74,6 +78,7 @@ export const update = mutation({
     if (updates.cooklangSource !== undefined) patch.cooklangSource = updates.cooklangSource
     if (updates.parsedIngredients !== undefined) patch.parsedIngredients = updates.parsedIngredients
     if (updates.parsedSteps !== undefined) patch.parsedSteps = updates.parsedSteps
+    if (updates.servings !== undefined) patch.servings = updates.servings
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(id, patch)
     }
