@@ -354,4 +354,11 @@ describe('formatQuantity', () => {
     expect(formatQuantity(0.625)).toBe('\u215d')
     expect(formatQuantity(0.875)).toBe('\u215e')
   })
+
+  it('should return absolute value for negative numbers (cooking quantities are positive)', () => {
+    expect(formatQuantity(-1)).toBe('1')
+    expect(formatQuantity(-1.5)).toBe('1\u00bd')
+    expect(formatQuantity(-0.5)).toBe('\u00bd')
+    expect(formatQuantity(-2.25)).toBe('2\u00bc')
+  })
 })

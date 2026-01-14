@@ -265,22 +265,32 @@ export function convertUnit(
 
 /**
  * Common fractions mapped to their unicode characters.
+ * Order matters: more precise fractions (1/8, 1/4, etc.) are checked before
+ * less precise ones (1/3, 2/3) to avoid incorrect tolerance-based matches.
+ * Thirds use tighter tolerances since 0.333 and 0.667 are approximations.
  */
 const FRACTIONS: Array<{ value: number; char: string; tolerance: number }> = [
-  { value: 0.5, char: '\u00bd', tolerance: 0.02 }, // 1/2
-  { value: 0.25, char: '\u00bc', tolerance: 0.02 }, // 1/4
-  { value: 0.75, char: '\u00be', tolerance: 0.02 }, // 3/4
-  { value: 0.333, char: '\u2153', tolerance: 0.02 }, // 1/3
-  { value: 0.667, char: '\u2154', tolerance: 0.02 }, // 2/3
+  // Eighths first (most precise)
   { value: 0.125, char: '\u215b', tolerance: 0.02 }, // 1/8
   { value: 0.375, char: '\u215c', tolerance: 0.02 }, // 3/8
   { value: 0.625, char: '\u215d', tolerance: 0.02 }, // 5/8
   { value: 0.875, char: '\u215e', tolerance: 0.02 }, // 7/8
+  // Quarters
+  { value: 0.25, char: '\u00bc', tolerance: 0.02 }, // 1/4
+  { value: 0.75, char: '\u00be', tolerance: 0.02 }, // 3/4
+  // Half
+  { value: 0.5, char: '\u00bd', tolerance: 0.02 }, // 1/2
+  // Thirds last with tighter tolerance to avoid false matches (e.g., 0.34 matching 1/3)
+  { value: 1 / 3, char: '\u2153', tolerance: 0.01 }, // 1/3 (~0.333...)
+  { value: 2 / 3, char: '\u2154', tolerance: 0.01 }, // 2/3 (~0.666...)
 ]
 
 /**
  * Formats a numeric quantity for display, using unicode fractions
  * where appropriate.
+ *
+ * Note: Cooking quantities are always positive, so negative values
+ * are converted to their absolute value before formatting.
  *
  * @param value - The numeric value to format
  * @returns A formatted string, potentially with unicode fractions
@@ -291,8 +301,11 @@ export function formatQuantity(value: number): string {
     return '0'
   }
 
-  const wholePart = Math.floor(value)
-  const fractionalPart = value - wholePart
+  // Cooking quantities are always positive, use absolute value
+  const absValue = Math.abs(value)
+
+  const wholePart = Math.floor(absValue)
+  const fractionalPart = absValue - wholePart
 
   // Check if it's a whole number
   if (fractionalPart < 0.01) {
@@ -311,6 +324,6 @@ export function formatQuantity(value: number): string {
 
   // Fall back to decimal representation
   // Round to 2 decimal places to avoid floating point artifacts
-  const rounded = Math.round(value * 100) / 100
+  const rounded = Math.round(absValue * 100) / 100
   return rounded.toString()
 }
