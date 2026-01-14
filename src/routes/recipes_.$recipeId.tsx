@@ -843,6 +843,6 @@ const MarkAsCookedModal = ({
   )
 }
 
-export const Route = createFileRoute('/recipes/$recipeId')({
+export const Route = createFileRoute('/recipes_/$recipeId')({
   component: RecipeDetail,
 })
