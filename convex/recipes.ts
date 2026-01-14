@@ -17,6 +17,7 @@ const recipeValidator = v.object({
   parsedIngredients: v.array(parsedIngredientValidator),
   parsedSteps: v.array(v.string()),
   servings: v.optional(v.number()),
+  image: v.optional(v.string()),
 })
 
 export const list = query({
@@ -43,6 +44,7 @@ export const save = mutation({
     parsedIngredients: v.array(parsedIngredientValidator),
     parsedSteps: v.array(v.string()),
     servings: v.optional(v.number()),
+    image: v.optional(v.string()),
   },
   returns: v.id("recipes"),
   handler: async (ctx, args) => {
@@ -53,6 +55,7 @@ export const save = mutation({
       parsedIngredients: args.parsedIngredients,
       parsedSteps: args.parsedSteps,
       servings: args.servings,
+      image: args.image,
     })
   },
 })
@@ -65,6 +68,7 @@ export const update = mutation({
     parsedIngredients: v.optional(v.array(parsedIngredientValidator)),
     parsedSteps: v.optional(v.array(v.string())),
     servings: v.optional(v.number()),
+    image: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -79,6 +83,7 @@ export const update = mutation({
     if (updates.parsedIngredients !== undefined) patch.parsedIngredients = updates.parsedIngredients
     if (updates.parsedSteps !== undefined) patch.parsedSteps = updates.parsedSteps
     if (updates.servings !== undefined) patch.servings = updates.servings
+    if (updates.image !== undefined) patch.image = updates.image
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(id, patch)
     }
@@ -246,6 +251,7 @@ export const importFromUrl = action({
     cooklangSource: v.string(),
     title: v.string(),
     servings: v.optional(v.number()),
+    image: v.optional(v.string()),
   }),
   handler: async (_ctx, args) => {
     let parsedUrl: URL
@@ -280,10 +286,13 @@ export const importFromUrl = action({
             servings = parsed
           }
         }
+        // Extract image if available
+        const image = result.image || undefined
         return {
           cooklangSource: result.cooklang,
           title: result.title || "Imported Recipe",
           servings,
+          image,
         }
       }
     } catch {
@@ -325,7 +334,17 @@ export const importFromUrl = action({
       }
     }
 
-    return { cooklangSource, title, servings }
+    // Extract image - can be string or array
+    let image: string | undefined
+    if (recipeSchema.image) {
+      if (Array.isArray(recipeSchema.image)) {
+        image = recipeSchema.image[0]
+      } else {
+        image = recipeSchema.image
+      }
+    }
+
+    return { cooklangSource, title, servings, image }
   },
 })
 

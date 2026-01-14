@@ -33,6 +33,7 @@ export default defineSchema({
     ),
     parsedSteps: v.array(v.string()),
     servings: v.optional(v.number()),
+    image: v.optional(v.string()),
   }).index("by_title", ["title"]),
 
   shoppingLists: defineTable({

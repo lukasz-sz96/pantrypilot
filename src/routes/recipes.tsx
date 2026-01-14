@@ -25,23 +25,38 @@ const RecipeCard = ({ recipe }: {
     _id: string
     title: string
     source?: string
+    image?: string
     parsedIngredients: { originalText: string }[]
   }
 }) => (
   <Link
     to="/recipes/$recipeId"
     params={{ recipeId: recipe._id }}
-    className="card block hover:shadow-md transition-shadow"
+    className="card block hover:shadow-md transition-shadow overflow-hidden"
   >
-    <h3 className="font-display text-lg text-espresso">{recipe.title}</h3>
-    <div className="flex items-center gap-3 mt-2 text-sm text-warmgray">
-      <span>{recipe.parsedIngredients.length} ingredients</span>
-      {recipe.source && (
-        <>
-          <span>•</span>
-          <span className="truncate max-w-[150px]">{recipe.source}</span>
-        </>
+    <div className="flex gap-4">
+      {recipe.image && (
+        <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-warmgray/10">
+          <img
+            src={recipe.image}
+            alt=""
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
       )}
+      <div className="flex-1 min-w-0">
+        <h3 className="font-display text-lg text-espresso">{recipe.title}</h3>
+        <div className="flex items-center gap-3 mt-2 text-sm text-warmgray">
+          <span>{recipe.parsedIngredients.length} ingredients</span>
+          {recipe.source && (
+            <>
+              <span>•</span>
+              <span className="truncate max-w-[150px]">{recipe.source}</span>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   </Link>
 )
@@ -52,6 +67,7 @@ const AddRecipeModal = ({ onClose }: { onClose: () => void }) => {
     cooklangSource: string
     title: string
     source: string
+    image?: string
     manualIngredients?: { name: string; quantity?: number; unit?: string }[]
   } | null>(null)
 
@@ -61,6 +77,7 @@ const AddRecipeModal = ({ onClose }: { onClose: () => void }) => {
         cooklangSource={importData.cooklangSource}
         title={importData.title}
         source={importData.source}
+        image={importData.image}
         manualIngredients={importData.manualIngredients}
         onClose={onClose}
         onBack={() => setImportData(null)}
@@ -127,7 +144,7 @@ const ImportRecipeForm = ({
   onImported,
 }: {
   onBack: () => void
-  onImported: (data: { cooklangSource: string; title: string; source: string }) => void
+  onImported: (data: { cooklangSource: string; title: string; source: string; image?: string }) => void
 }) => {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -145,6 +162,7 @@ const ImportRecipeForm = ({
         cooklangSource: result.cooklangSource,
         title: result.title,
         source: url.trim(),
+        image: result.image,
       })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to import recipe')
@@ -299,6 +317,7 @@ const RecipePreviewModal = ({
   cooklangSource,
   title,
   source,
+  image,
   manualIngredients,
   onClose,
   onBack,
@@ -306,6 +325,7 @@ const RecipePreviewModal = ({
   cooklangSource: string
   title: string
   source: string
+  image?: string
   manualIngredients?: { name: string; quantity?: number; unit?: string }[]
   onClose: () => void
   onBack: () => void
@@ -429,6 +449,7 @@ const RecipePreviewModal = ({
         })),
         parsedSteps: parsed.steps,
         servings: parsed.servings,
+        image,
       })
 
       onClose()

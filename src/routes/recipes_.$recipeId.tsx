@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -7,15 +7,21 @@ import { convertUnit, canConvert, formatQuantity } from '../lib/units'
 
 const RecipeDetail = () => {
   const { recipeId } = Route.useParams()
+  const navigate = useNavigate()
   const recipe = useQuery(api.recipes.get, {
     id: recipeId as Id<'recipes'>,
   })
   const pantryItems = useQuery(api.pantry.list)
   const allIngredients = useQuery(api.ingredients.list)
+  const removeRecipe = useMutation(api.recipes.remove)
+  const updateRecipe = useMutation(api.recipes.update)
   const [currentStep, setCurrentStep] = useState(0)
   const [showCookMode, setShowCookMode] = useState(false)
   const [showMarkCooked, setShowMarkCooked] = useState(false)
   const [showAddToList, setShowAddToList] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showEditImage, setShowEditImage] = useState(false)
+  const [editImageUrl, setEditImageUrl] = useState('')
   const [currentServings, setCurrentServings] = useState<number | null>(null)
 
   useEffect(() => {
@@ -140,8 +146,30 @@ const RecipeDetail = () => {
         </div>
       </header>
 
+      <div className="relative w-full h-48 sm:h-64 overflow-hidden bg-warmgray/10">
+        {recipe.image ? (
+          <img
+            src={recipe.image}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-warmgray">
+            No image
+          </div>
+        )}
+        <button
+          onClick={() => {
+            setEditImageUrl(recipe.image || '')
+            setShowEditImage(true)
+          }}
+          className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-black/50 text-white text-sm hover:bg-black/70 transition-colors"
+        >
+          {recipe.image ? 'Change' : 'Add'} Image
+        </button>
+      </div>
+
       <div className="px-4 py-4 space-y-6">
-        {/* Source link */}
         {recipe.source && (
           <a
             href={recipe.source}
@@ -264,8 +292,18 @@ const RecipeDetail = () => {
           </div>
         </section>
 
-        {/* Action buttons */}
         <div className="flex flex-col gap-3 pt-4">
+          {ingredientsWithStatus.some(
+            (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty')
+          ) && (
+            <button
+              onClick={() => setShowAddToList(true)}
+              className="w-full py-4 rounded-xl bg-terracotta text-white font-medium hover:bg-terracotta/90 transition-colors flex items-center justify-center gap-2"
+            >
+              <span className="text-lg">🛒</span>
+              Add Missing to Shopping List
+            </button>
+          )}
           <div className="flex gap-3">
             <button
               onClick={() => setShowCookMode(true)}
@@ -280,18 +318,90 @@ const RecipeDetail = () => {
               Back
             </Link>
           </div>
-          {ingredientsWithStatus.some(
-            (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty')
-          ) && (
-            <button
-              onClick={() => setShowAddToList(true)}
-              className="w-full py-3 rounded-xl border border-terracotta text-terracotta hover:bg-terracotta/10 transition-colors"
-            >
-              Add Missing to Shopping List
-            </button>
-          )}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full py-3 rounded-xl text-terracotta hover:bg-terracotta/10 transition-colors text-sm"
+          >
+            Delete Recipe
+          </button>
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-cream rounded-2xl p-6 max-w-sm w-full">
+            <h2 className="font-display text-xl text-espresso mb-2">Delete Recipe?</h2>
+            <p className="text-warmgray mb-6">
+              Are you sure you want to delete "{recipe.title}"? This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await removeRecipe({ id: recipe._id })
+                  navigate({ to: '/recipes' })
+                }}
+                className="flex-1 py-3 rounded-xl bg-terracotta text-white font-medium hover:bg-terracotta/90"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditImage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-cream rounded-2xl p-6 max-w-md w-full">
+            <h2 className="font-display text-xl text-espresso mb-4">Recipe Image</h2>
+            <input
+              type="url"
+              value={editImageUrl}
+              onChange={(e) => setEditImageUrl(e.target.value)}
+              placeholder="Paste image URL..."
+              className="w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage mb-4"
+              autoFocus
+            />
+            {editImageUrl && (
+              <div className="mb-4 rounded-xl overflow-hidden bg-warmgray/10 h-40">
+                <img
+                  src={editImageUrl}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowEditImage(false)}
+                className="flex-1 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await updateRecipe({
+                    id: recipe._id,
+                    image: editImageUrl || undefined,
+                  })
+                  setShowEditImage(false)
+                }}
+                className="flex-1 py-3 rounded-xl bg-sage text-white font-medium hover:bg-sage/90"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
