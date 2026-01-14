@@ -107,3 +107,26 @@ export const importFromUrl = action({
     return { cooklangSource, title }
   },
 })
+
+export const markCooked = mutation({
+  args: {
+    recipeId: v.id("recipes"),
+    deductions: v.array(
+      v.object({
+        pantryItemId: v.id("pantryItems"),
+        quantity: v.number(),
+      })
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const deduction of args.deductions) {
+      const item = await ctx.db.get(deduction.pantryItemId)
+      if (item) {
+        const newQuantity = Math.max(0, item.quantity - deduction.quantity)
+        await ctx.db.patch(deduction.pantryItemId, { quantity: newQuantity })
+      }
+    }
+    return null
+  },
+})
