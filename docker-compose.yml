@@ -1,4 +1,16 @@
 services:
+  app:
+    image: ghcr.io/${GITHUB_REPOSITORY:-pantrypilot}:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_CONVEX_URL=${VITE_CONVEX_URL}
+      - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
+    depends_on:
+      cooklang-import:
+        condition: service_healthy
+    restart: unless-stopped
+
   cooklang-import:
     build:
       context: ./services/cooklang-import
