@@ -28,38 +28,43 @@ const RecipeCard = ({ recipe }: {
     image?: string
     parsedIngredients: { originalText: string }[]
   }
-}) => (
-  <Link
-    to="/recipes/$recipeId"
-    params={{ recipeId: recipe._id }}
-    className="card block hover:shadow-md transition-shadow overflow-hidden"
-  >
-    <div className="flex gap-4">
+}) => {
+  let hostname = ''
+  if (recipe.source) {
+    try {
+      hostname = new URL(recipe.source).hostname.replace('www.', '')
+    } catch {}
+  }
+
+  return (
+    <Link
+      to="/recipes/$recipeId"
+      params={{ recipeId: recipe._id }}
+      className="card block hover:shadow-md transition-shadow overflow-hidden recipe-card-desktop"
+    >
       {recipe.image && (
-        <div className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-warmgray/10">
+        <div className="recipe-card-image bg-warmgray/10">
           <img
             src={recipe.image}
             alt=""
-            className="w-full h-full object-cover"
             loading="lazy"
           />
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <h3 className="font-display text-lg text-espresso">{recipe.title}</h3>
+        <h3 className="font-display text-lg text-espresso line-clamp-2">{recipe.title}</h3>
         <div className="flex items-center gap-3 mt-2 text-sm text-warmgray">
           <span>{recipe.parsedIngredients.length} ingredients</span>
-          {recipe.source && (
-            <>
-              <span>•</span>
-              <span className="truncate max-w-[150px]">{recipe.source}</span>
-            </>
-          )}
         </div>
+        {hostname && (
+          <div className="mt-1 text-xs text-warmgray truncate">
+            {hostname}
+          </div>
+        )}
       </div>
-    </div>
-  </Link>
-)
+    </Link>
+  )
+}
 
 const AddRecipeModal = ({ onClose }: { onClose: () => void }) => {
   const [mode, setMode] = useState<'choose' | 'import' | 'manual'>('choose')
@@ -687,7 +692,7 @@ const Recipes = () => {
           </button>
         </div>
       </header>
-      <div className="px-4 py-4 space-y-3">
+      <div className="content-section py-4">
         {recipes === undefined ? (
           <div className="text-center py-8">
             <div className="animate-pulse text-warmgray">Loading recipes...</div>
@@ -703,9 +708,11 @@ const Recipes = () => {
             </button>
           </div>
         ) : (
-          recipes.map((recipe) => (
-            <RecipeCard key={recipe._id} recipe={recipe} />
-          ))
+          <div className="recipe-grid">
+            {recipes.map((recipe) => (
+              <RecipeCard key={recipe._id} recipe={recipe} />
+            ))}
+          </div>
         )}
       </div>
       {showAddModal && (

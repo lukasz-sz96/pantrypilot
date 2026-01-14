@@ -152,184 +152,187 @@ const RecipeDetail = () => {
         </div>
       </header>
 
-      <div className="relative w-full h-48 sm:h-64 overflow-hidden bg-warmgray/10">
+      <div className="recipe-hero">
         {recipe.image ? (
           <img
             src={recipe.image}
             alt=""
-            className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-warmgray">
             No image
           </div>
         )}
-        <button
-          onClick={() => {
-            setEditImageUrl(recipe.image || '')
-            setShowEditImage(true)
-          }}
-          className="absolute bottom-3 right-3 px-3 py-1.5 rounded-lg bg-black/50 text-white text-sm hover:bg-black/70 transition-colors"
-        >
-          {recipe.image ? 'Change' : 'Add'} Image
-        </button>
+        <div className="recipe-hero-overlay">
+          <button
+            onClick={() => {
+              setEditImageUrl(recipe.image || '')
+              setShowEditImage(true)
+            }}
+            className="px-3 py-1.5 rounded-lg bg-black/50 text-white text-sm hover:bg-black/70 transition-colors"
+          >
+            {recipe.image ? 'Change' : 'Add'} Image
+          </button>
+        </div>
       </div>
 
-      <div className="px-4 py-4 space-y-6">
+      <div className="content-section py-4 lg:py-6">
         {recipe.source && (
           <a
             href={recipe.source}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-sage hover:underline flex items-center gap-1"
+            className="text-sm text-sage hover:underline flex items-center gap-1 mb-4"
           >
             View original recipe →
           </a>
         )}
 
-        {/* Servings control */}
-        <div className="servings-control">
-          <span>Servings:</span>
-          <button
-            onClick={() => setCurrentServings(Math.max(1, (currentServings || baseServings) - 1))}
-            disabled={currentServings === 1}
-            className="servings-btn"
-            aria-label="Decrease servings"
-            title="Decrease servings"
-          >
-            −
-          </button>
-          <span className="servings-value">{currentServings}</span>
-          <button
-            onClick={() => setCurrentServings((currentServings || baseServings) + 1)}
-            className="servings-btn"
-            aria-label="Increase servings"
-            title="Increase servings"
-          >
-            +
-          </button>
-        </div>
-
-        {/* Ingredient availability summary */}
-        {totalLinked > 0 && (
-          <div className="bg-cream rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-medium text-espresso">Ingredient Check</span>
-              <span
-                className={`text-sm font-medium ${
-                  availableCount === totalLinked
-                    ? 'text-sage'
-                    : availableCount >= totalLinked * 0.7
-                      ? 'text-yellow-600'
-                      : 'text-terracotta'
-                }`}
+        <div className="recipe-detail-layout">
+          <div className="recipe-detail-sidebar space-y-4">
+            <div className="servings-control">
+              <span>Servings:</span>
+              <button
+                onClick={() => setCurrentServings(Math.max(1, (currentServings || baseServings) - 1))}
+                disabled={currentServings === 1}
+                className="servings-btn"
+                aria-label="Decrease servings"
+                title="Decrease servings"
               >
-                {availableCount}/{totalLinked} in pantry
-              </span>
+                −
+              </button>
+              <span className="servings-value">{currentServings}</span>
+              <button
+                onClick={() => setCurrentServings((currentServings || baseServings) + 1)}
+                className="servings-btn"
+                aria-label="Increase servings"
+                title="Increase servings"
+              >
+                +
+              </button>
             </div>
-            <div className="w-full bg-warmgray/20 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  availableCount === totalLinked
-                    ? 'bg-sage'
-                    : availableCount >= totalLinked * 0.7
-                      ? 'bg-yellow-500'
-                      : 'bg-terracotta'
-                }`}
-                style={{ width: `${(availableCount / totalLinked) * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
 
-        {/* Ingredients */}
-        <section>
-          <h2 className="text-lg font-display text-espresso mb-3">Ingredients</h2>
-          <div className="space-y-2">
-            {ingredientsWithStatus.map((ing, idx) => {
-              const scaledQuantity = ing.quantity ? ing.quantity * scaleFactor : undefined
-              const displayQuantity = scaledQuantity ? formatQuantity(scaledQuantity) : ''
-              return (
-                <div
-                  key={idx}
-                  className="flex items-center gap-3 p-3 bg-cream rounded-xl"
-                >
-                  <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
-                      ing.status === 'available'
-                        ? 'bg-sage/20 text-sage'
-                        : ing.status === 'missing' || ing.status === 'empty'
-                          ? 'bg-terracotta/20 text-terracotta'
-                          : 'bg-warmgray/20 text-warmgray'
+            {totalLinked > 0 && (
+              <div className="bg-cream rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-espresso">Ingredient Check</span>
+                  <span
+                    className={`text-sm font-medium ${
+                      availableCount === totalLinked
+                        ? 'text-sage'
+                        : availableCount >= totalLinked * 0.7
+                          ? 'text-yellow-600'
+                          : 'text-terracotta'
                     }`}
                   >
-                    {ing.status === 'available' ? '✓' : ing.status === 'unknown' ? '?' : '✕'}
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-espresso">
-                      {displayQuantity && `${displayQuantity} `}
-                      {ing.unit && `${ing.unit} `}
-                      {ing.linkedName || ing.originalText}
-                    </span>
-                    {ing.linkedName && ing.linkedName !== ing.originalText && (
-                      <span className="text-xs text-warmgray ml-2">
-                        ({ing.originalText})
-                      </span>
-                    )}
-                  </div>
+                    {availableCount}/{totalLinked} in pantry
+                  </span>
                 </div>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* Steps */}
-        <section>
-          <h2 className="text-lg font-display text-espresso mb-3">Instructions</h2>
-          <div className="space-y-3">
-            {recipe.parsedSteps.map((step, idx) => (
-              <div key={idx} className="flex gap-3 p-3 bg-cream rounded-xl">
-                <div className="w-8 h-8 rounded-full bg-sage/20 text-sage flex items-center justify-center font-medium shrink-0">
-                  {idx + 1}
+                <div className="w-full bg-warmgray/20 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      availableCount === totalLinked
+                        ? 'bg-sage'
+                        : availableCount >= totalLinked * 0.7
+                          ? 'bg-yellow-500'
+                          : 'bg-terracotta'
+                    }`}
+                    style={{ width: `${(availableCount / totalLinked) * 100}%` }}
+                  />
                 </div>
-                <p className="text-espresso flex-1 leading-relaxed">{step}</p>
               </div>
-            ))}
-          </div>
-        </section>
+            )}
 
-        <div className="flex flex-col gap-3 pt-4">
-          {ingredientsWithStatus.some(
-            (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty')
-          ) && (
-            <button
-              onClick={() => setShowAddToList(true)}
-              className="w-full py-4 rounded-xl bg-terracotta text-white font-medium hover:bg-terracotta/90 transition-colors flex items-center justify-center gap-2"
-            >
-              <span className="text-lg">🛒</span>
-              Add Missing to Shopping List
-            </button>
-          )}
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowCookMode(true)}
-              className="flex-1 btn-primary"
-            >
-              Start Cooking
-            </button>
-            <Link
-              to="/recipes"
-              className="px-6 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10 transition-colors"
-            >
-              Back
-            </Link>
+            <section>
+              <h2 className="text-lg font-display text-espresso mb-3">Ingredients</h2>
+              <div className="space-y-2">
+                {ingredientsWithStatus.map((ing, idx) => {
+                  const scaledQuantity = ing.quantity ? ing.quantity * scaleFactor : undefined
+                  const displayQuantity = scaledQuantity ? formatQuantity(scaledQuantity) : ''
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-3 p-3 bg-cream rounded-xl"
+                    >
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                          ing.status === 'available'
+                            ? 'bg-sage/20 text-sage'
+                            : ing.status === 'missing' || ing.status === 'empty'
+                              ? 'bg-terracotta/20 text-terracotta'
+                              : 'bg-warmgray/20 text-warmgray'
+                        }`}
+                      >
+                        {ing.status === 'available' ? '✓' : ing.status === 'unknown' ? '?' : '✕'}
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-espresso">
+                          {displayQuantity && `${displayQuantity} `}
+                          {ing.unit && `${ing.unit} `}
+                          {ing.linkedName || ing.originalText}
+                        </span>
+                        {ing.linkedName && ing.linkedName !== ing.originalText && (
+                          <span className="text-xs text-warmgray ml-2">
+                            ({ing.originalText})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+
+            {ingredientsWithStatus.some(
+              (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty')
+            ) && (
+              <button
+                onClick={() => setShowAddToList(true)}
+                className="w-full py-4 rounded-xl bg-terracotta text-white font-medium hover:bg-terracotta/90 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="text-lg">🛒</span>
+                Add Missing to Shopping List
+              </button>
+            )}
           </div>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-full py-3 rounded-xl text-terracotta hover:bg-terracotta/10 transition-colors text-sm"
-          >
-            Delete Recipe
-          </button>
+
+          <div className="recipe-detail-main space-y-6">
+            <section>
+              <h2 className="text-lg font-display text-espresso mb-3">Instructions</h2>
+              <div className="space-y-3">
+                {recipe.parsedSteps.map((step, idx) => (
+                  <div key={idx} className="flex gap-3 p-3 lg:p-4 bg-cream rounded-xl">
+                    <div className="w-8 h-8 rounded-full bg-sage/20 text-sage flex items-center justify-center font-medium shrink-0">
+                      {idx + 1}
+                    </div>
+                    <p className="text-espresso flex-1 leading-relaxed">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <button
+                onClick={() => setShowCookMode(true)}
+                className="flex-1 btn-primary"
+              >
+                Start Cooking
+              </button>
+              <Link
+                to="/recipes"
+                className="px-6 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10 transition-colors text-center"
+              >
+                Back
+              </Link>
+            </div>
+
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full py-3 rounded-xl text-terracotta hover:bg-terracotta/10 transition-colors text-sm"
+            >
+              Delete Recipe
+            </button>
+          </div>
         </div>
       </div>
 
