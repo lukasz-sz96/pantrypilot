@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { convertUnit, canConvert, formatQuantity } from '../lib/units'
 
 const RecipeDetail = () => {
@@ -15,6 +15,8 @@ const RecipeDetail = () => {
   const allIngredients = useQuery(api.ingredients.list)
   const removeRecipe = useMutation(api.recipes.remove)
   const updateRecipe = useMutation(api.recipes.update)
+  const generateUploadUrl = useMutation(api.storage.generateUploadUrl)
+  const getImageUrl = useMutation(api.storage.getImageUrl)
   const [currentStep, setCurrentStep] = useState(0)
   const [showCookMode, setShowCookMode] = useState(false)
   const [showMarkCooked, setShowMarkCooked] = useState(false)
@@ -22,6 +24,10 @@ const RecipeDetail = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showEditImage, setShowEditImage] = useState(false)
   const [editImageUrl, setEditImageUrl] = useState('')
+  const [imageMode, setImageMode] = useState<'url' | 'upload'>('url')
+  const [uploading, setUploading] = useState(false)
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentServings, setCurrentServings] = useState<number | null>(null)
 
   useEffect(() => {
@@ -359,44 +365,134 @@ const RecipeDetail = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-cream rounded-2xl p-6 max-w-md w-full">
             <h2 className="font-display text-xl text-espresso mb-4">Recipe Image</h2>
-            <input
-              type="url"
-              value={editImageUrl}
-              onChange={(e) => setEditImageUrl(e.target.value)}
-              placeholder="Paste image URL..."
-              className="w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage mb-4"
-              autoFocus
-            />
-            {editImageUrl && (
-              <div className="mb-4 rounded-xl overflow-hidden bg-warmgray/10 h-40">
-                <img
-                  src={editImageUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none'
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setImageMode('url')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  imageMode === 'url'
+                    ? 'bg-sage text-white'
+                    : 'bg-warmgray/10 text-espresso hover:bg-warmgray/20'
+                }`}
+              >
+                Paste URL
+              </button>
+              <button
+                onClick={() => setImageMode('upload')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  imageMode === 'upload'
+                    ? 'bg-sage text-white'
+                    : 'bg-warmgray/10 text-espresso hover:bg-warmgray/20'
+                }`}
+              >
+                Upload File
+              </button>
+            </div>
+
+            {imageMode === 'url' ? (
+              <>
+                <input
+                  type="url"
+                  value={editImageUrl}
+                  onChange={(e) => setEditImageUrl(e.target.value)}
+                  placeholder="Paste image URL..."
+                  className="w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage mb-4"
+                  autoFocus
+                />
+                {editImageUrl && (
+                  <div className="mb-4 rounded-xl overflow-hidden bg-warmgray/10 h-40">
+                    <img
+                      src={editImageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none'
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const reader = new FileReader()
+                      reader.onload = () => setUploadPreview(reader.result as string)
+                      reader.readAsDataURL(file)
+                    }
                   }}
                 />
-              </div>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full py-8 rounded-xl border-2 border-dashed border-warmgray/30 text-warmgray hover:border-sage hover:text-sage transition-colors mb-4"
+                >
+                  {uploadPreview ? 'Choose different file' : 'Click to select image'}
+                </button>
+                {uploadPreview && (
+                  <div className="mb-4 rounded-xl overflow-hidden bg-warmgray/10 h-40">
+                    <img
+                      src={uploadPreview}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </>
             )}
+
             <div className="flex gap-3">
               <button
-                onClick={() => setShowEditImage(false)}
+                onClick={() => {
+                  setShowEditImage(false)
+                  setUploadPreview(null)
+                  setEditImageUrl('')
+                }}
                 className="flex-1 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10"
               >
                 Cancel
               </button>
               <button
+                disabled={uploading}
                 onClick={async () => {
-                  await updateRecipe({
-                    id: recipe._id,
-                    image: editImageUrl || undefined,
-                  })
+                  if (imageMode === 'url') {
+                    await updateRecipe({
+                      id: recipe._id,
+                      image: editImageUrl || undefined,
+                    })
+                  } else if (fileInputRef.current?.files?.[0]) {
+                    setUploading(true)
+                    try {
+                      const uploadUrl = await generateUploadUrl()
+                      const file = fileInputRef.current.files[0]
+                      const response = await fetch(uploadUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': file.type },
+                        body: file,
+                      })
+                      const { storageId } = await response.json()
+                      const imageUrl = await getImageUrl({ storageId })
+                      if (imageUrl) {
+                        await updateRecipe({
+                          id: recipe._id,
+                          image: imageUrl,
+                        })
+                      }
+                    } finally {
+                      setUploading(false)
+                    }
+                  }
                   setShowEditImage(false)
+                  setUploadPreview(null)
+                  setEditImageUrl('')
                 }}
-                className="flex-1 py-3 rounded-xl bg-sage text-white font-medium hover:bg-sage/90"
+                className="flex-1 py-3 rounded-xl bg-sage text-white font-medium hover:bg-sage/90 disabled:opacity-50"
               >
-                Save
+                {uploading ? 'Uploading...' : 'Save'}
               </button>
             </div>
           </div>
