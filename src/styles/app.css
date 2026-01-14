@@ -1,5 +1,5 @@
-@import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
 
 @theme {
   --color-cream: #FDF8F3;
@@ -202,6 +202,11 @@
   .badge-neutral {
     background-color: var(--color-cream-dark);
     color: var(--color-warmgray);
+  }
+
+  .badge-sage {
+    background-color: var(--color-sage-light);
+    color: var(--color-sage-dark);
   }
 }
 

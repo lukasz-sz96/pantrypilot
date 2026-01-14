@@ -13,6 +13,7 @@ export const list = query({
       ingredient: v.object({
         _id: v.id("ingredients"),
         name: v.string(),
+        aliases: v.array(v.string()),
         category: v.string(),
         isStaple: v.boolean(),
         defaultUnit: v.string(),
@@ -30,6 +31,7 @@ export const list = query({
           ingredient: {
             _id: ingredient._id,
             name: ingredient.name,
+            aliases: ingredient.aliases,
             category: ingredient.category,
             isStaple: ingredient.isStaple,
             defaultUnit: ingredient.defaultUnit,

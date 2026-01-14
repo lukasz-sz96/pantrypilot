@@ -2,9 +2,10 @@ import { query, mutation, action } from "./_generated/server"
 import { v } from "convex/values"
 
 const parsedIngredientValidator = v.object({
-  name: v.string(),
+  originalText: v.string(),
   quantity: v.optional(v.number()),
   unit: v.optional(v.string()),
+  ingredientId: v.optional(v.id("ingredients")),
 })
 
 const recipeValidator = v.object({

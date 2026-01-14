@@ -1,7 +1,8 @@
 export interface ParsedIngredient {
-  name: string
+  originalText: string
   quantity?: number
   unit?: string
+  ingredientId?: string
 }
 
 export interface ParsedRecipe {
@@ -10,22 +11,37 @@ export interface ParsedRecipe {
   steps: string[]
 }
 
-// Matches @ingredient, @ingredient{}, @ingredient{quantity}, @ingredient{quantity%unit}
-const INGREDIENT_REGEX = /@([^@#~{}]+?)(?:\{([^}]*)\})?(?=\s|$|[.,;:!?])/g
-
 export function parseCooklang(source: string): ParsedRecipe {
-  const lines = source.split("\n")
   const ingredients: ParsedIngredient[] = []
   const steps: string[] = []
   let title = ""
 
-  for (const line of lines) {
+  let text = source
+
+  text = text.replace(/\[-[\s\S]*?-\]/g, "")
+
+  let inFrontMatter = false
+  let frontMatterCount = 0
+
+  const lines = text.split("\n")
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
     const trimmed = line.trim()
 
-    // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith("--")) continue
+    if (trimmed === "---") {
+      if (i === 0 || (inFrontMatter && frontMatterCount === 1)) {
+        inFrontMatter = !inFrontMatter
+        frontMatterCount++
+        continue
+      }
+    }
+    if (inFrontMatter) continue
 
-    // Metadata line (>> title: ...)
+    if (!trimmed) continue
+
+    if (trimmed.startsWith("--")) continue
+
     if (trimmed.startsWith(">>")) {
       const match = trimmed.match(/^>>\s*title:\s*(.+)/i)
       if (match) {
@@ -34,7 +50,12 @@ export function parseCooklang(source: string): ParsedRecipe {
       continue
     }
 
-    // Section headers
+    if (trimmed.startsWith(">")) continue
+
+    if (/^=+\s/.test(trimmed) || /^=+$/.test(trimmed)) {
+      continue
+    }
+
     if (trimmed.startsWith("#")) {
       if (!title) {
         title = trimmed.replace(/^#+\s*/, "").trim()
@@ -42,44 +63,9 @@ export function parseCooklang(source: string): ParsedRecipe {
       continue
     }
 
-    // Parse step and extract ingredients
-    let step = trimmed
-    let match
+    extractIngredients(trimmed, ingredients)
 
-    INGREDIENT_REGEX.lastIndex = 0
-    while ((match = INGREDIENT_REGEX.exec(trimmed)) !== null) {
-      const name = match[1].trim()
-      const specifier = match[2]
-
-      let quantity: number | undefined
-      let unit: string | undefined
-
-      if (specifier) {
-        if (specifier.includes("%")) {
-          const [qtyStr, unitStr] = specifier.split("%")
-          quantity = parseQuantity(qtyStr)
-          unit = unitStr.trim() || undefined
-        } else {
-          quantity = parseQuantity(specifier)
-        }
-      }
-
-      // Check if ingredient already exists
-      const existing = ingredients.find(
-        (i) => i.name.toLowerCase() === name.toLowerCase()
-      )
-      if (!existing) {
-        ingredients.push({ name, quantity, unit })
-      }
-    }
-
-    // Clean step text for display (remove Cooklang syntax)
-    step = step
-      .replace(/@([^@#~{}]+?)(?:\{[^}]*\})?/g, "$1") // @ingredient{...} -> ingredient
-      .replace(/#([^#{}]+?)(?:\{[^}]*\})?/g, "$1")   // #cookware{...} -> cookware
-      .replace(/~\{([^}]*)\}/g, "$1")                 // ~{timer} -> timer
-      .trim()
-
+    const step = cleanStepText(trimmed)
     if (step) {
       steps.push(step)
     }
@@ -88,11 +74,69 @@ export function parseCooklang(source: string): ParsedRecipe {
   return { title, ingredients, steps }
 }
 
+function extractIngredients(text: string, ingredients: ParsedIngredient[]): void {
+  const withBraces = /@([^@#~{}]+)\{([^}]*)\}/g
+  let match
+
+  while ((match = withBraces.exec(text)) !== null) {
+    const name = match[1].trim()
+
+    if (name.startsWith("./") || name.startsWith("../")) continue
+
+    const specifier = match[2]
+    const { quantity, unit } = parseSpecifier(specifier)
+
+    addIngredient(ingredients, name, quantity, unit)
+  }
+
+  const processed = text.replace(/@[^@#~{}]+\{[^}]*\}/g, " ")
+
+  const singleWord = /@(\w+)(?=\s|$|[.,;:!?'"])/g
+
+  while ((match = singleWord.exec(processed)) !== null) {
+    const name = match[1].trim()
+    addIngredient(ingredients, name, undefined, undefined)
+  }
+}
+
+function addIngredient(
+  ingredients: ParsedIngredient[],
+  name: string,
+  quantity: number | undefined,
+  unit: string | undefined
+): void {
+  const existing = ingredients.find(
+    (i) => i.originalText.toLowerCase() === name.toLowerCase()
+  )
+  if (!existing) {
+    ingredients.push({ originalText: name, quantity, unit })
+  }
+}
+
+function parseSpecifier(specifier: string): { quantity?: number; unit?: string } {
+  if (!specifier) return {}
+
+  let spec = specifier.trim()
+
+  if (spec.startsWith("=")) {
+    spec = spec.slice(1).trim()
+  }
+
+  if (spec.includes("%")) {
+    const [qtyStr, unitStr] = spec.split("%")
+    return {
+      quantity: parseQuantity(qtyStr),
+      unit: unitStr.trim() || undefined,
+    }
+  }
+
+  return { quantity: parseQuantity(spec) }
+}
+
 function parseQuantity(str: string): number | undefined {
   const trimmed = str.trim()
   if (!trimmed) return undefined
 
-  // Handle mixed numbers like "1 1/2" (must check before simple fractions)
   const mixedMatch = trimmed.match(/^(\d+)\s+(\d+)\/(\d+)$/)
   if (mixedMatch) {
     const whole = Number(mixedMatch[1])
@@ -103,7 +147,6 @@ function parseQuantity(str: string): number | undefined {
     }
   }
 
-  // Handle simple fractions like "1/2"
   const fractionMatch = trimmed.match(/^(\d+)\/(\d+)$/)
   if (fractionMatch) {
     const num = Number(fractionMatch[1])
@@ -117,8 +160,19 @@ function parseQuantity(str: string): number | undefined {
   return isNaN(num) ? undefined : num
 }
 
+function cleanStepText(text: string): string {
+  return text
+    .replace(/@([^@#~{}]+)\{[^}]*\}/g, "$1")
+    .replace(/@(\w+)/g, "$1")
+    .replace(/#([^#{}]+)\{[^}]*\}/g, "$1")
+    .replace(/#(\w+)/g, "$1")
+    .replace(/~([^~{}]*)\{[^}]*\}/g, "$1")
+    .replace(/~\{[^}]*\}/g, "")
+    .trim()
+}
+
 export function ingredientToText(ing: ParsedIngredient): string {
-  if (!ing.quantity && !ing.unit) return ing.name
-  if (!ing.unit) return `${ing.quantity} ${ing.name}`
-  return `${ing.quantity} ${ing.unit} ${ing.name}`
+  if (!ing.quantity && !ing.unit) return ing.originalText
+  if (!ing.unit) return `${ing.quantity} ${ing.originalText}`
+  return `${ing.quantity} ${ing.unit} ${ing.originalText}`
 }

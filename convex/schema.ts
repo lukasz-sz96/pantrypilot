@@ -5,6 +5,7 @@ export default defineSchema({
   ingredients: defineTable({
     name: v.string(),
     normalizedName: v.string(),
+    aliases: v.array(v.string()),
     category: v.string(),
     isStaple: v.boolean(),
     defaultUnit: v.string(),
@@ -22,9 +23,10 @@ export default defineSchema({
     cooklangSource: v.string(),
     parsedIngredients: v.array(
       v.object({
-        name: v.string(),
+        originalText: v.string(),
         quantity: v.optional(v.number()),
         unit: v.optional(v.string()),
+        ingredientId: v.optional(v.id("ingredients")),
       })
     ),
     parsedSteps: v.array(v.string()),
