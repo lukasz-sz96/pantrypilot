@@ -610,6 +610,17 @@ function calculateDeduction(
   pantryQty: number,
   pantryUnit: string
 ): { deductQty: number; note?: string } {
+  // Handle empty/missing units - treat as unitless quantities
+  if (!recipeUnit.trim() || !pantryUnit.trim()) {
+    // If either unit is empty, just use simple numeric deduction
+    return { deductQty: Math.min(recipeQty, pantryQty) }
+  }
+
+  // Validate quantities
+  if (recipeQty <= 0 || pantryQty <= 0) {
+    return { deductQty: 0 }
+  }
+
   // Same units - simple deduction
   if (recipeUnit === pantryUnit) {
     return { deductQty: Math.min(recipeQty, pantryQty) }
