@@ -9,12 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as ShoppingRouteImport } from './routes/shopping'
 import { Route as RecipesRouteImport } from './routes/recipes'
 import { Route as PantryRouteImport } from './routes/pantry'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RecipesRecipeIdRouteImport } from './routes/recipes_.$recipeId'
 
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShoppingRoute = ShoppingRouteImport.update({
   id: '/shopping',
   path: '/shopping',
@@ -30,6 +43,11 @@ const PantryRoute = PantryRouteImport.update({
   path: '/pantry',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -43,50 +61,95 @@ const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/pantry': typeof PantryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/pantry': typeof PantryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/pantry': typeof PantryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/recipes_/$recipeId': typeof RecipesRecipeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/pantry' | '/recipes' | '/shopping' | '/recipes/$recipeId'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/pantry' | '/recipes' | '/shopping' | '/recipes/$recipeId'
-  id:
-    | '__root__'
+  fullPaths:
     | '/'
+    | '/account'
     | '/pantry'
     | '/recipes'
     | '/shopping'
+    | '/sign-in'
+    | '/sign-up'
+    | '/recipes/$recipeId'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/account'
+    | '/pantry'
+    | '/recipes'
+    | '/shopping'
+    | '/sign-in'
+    | '/sign-up'
+    | '/recipes/$recipeId'
+  id:
+    | '__root__'
+    | '/'
+    | '/account'
+    | '/pantry'
+    | '/recipes'
+    | '/shopping'
+    | '/sign-in'
+    | '/sign-up'
     | '/recipes_/$recipeId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   PantryRoute: typeof PantryRoute
   RecipesRoute: typeof RecipesRoute
   ShoppingRoute: typeof ShoppingRoute
+  SignInRoute: typeof SignInRoute
+  SignUpRoute: typeof SignUpRoute
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shopping': {
       id: '/shopping'
       path: '/shopping'
@@ -108,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PantryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -127,9 +197,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   PantryRoute: PantryRoute,
   RecipesRoute: RecipesRoute,
   ShoppingRoute: ShoppingRoute,
+  SignInRoute: SignInRoute,
+  SignUpRoute: SignUpRoute,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -11,6 +11,7 @@ const parsedIngredientValidator = v.object({
 const recipeValidator = v.object({
   _id: v.id("recipes"),
   _creationTime: v.number(),
+  userId: v.string(),
   title: v.string(),
   source: v.optional(v.string()),
   cooklangSource: v.string(),
@@ -24,7 +25,12 @@ export const list = query({
   args: {},
   returns: v.array(recipeValidator),
   handler: async (ctx) => {
-    return await ctx.db.query("recipes").collect()
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) return []
+    return await ctx.db
+      .query("recipes")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect()
   },
 })
 
@@ -32,7 +38,11 @@ export const get = query({
   args: { id: v.id("recipes") },
   returns: v.union(recipeValidator, v.null()),
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id)
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) return null
+    const recipe = await ctx.db.get(args.id)
+    if (!recipe || recipe.userId !== identity.subject) return null
+    return recipe
   },
 })
 
@@ -48,7 +58,10 @@ export const save = mutation({
   },
   returns: v.id("recipes"),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
     return await ctx.db.insert("recipes", {
+      userId: identity.subject,
       title: args.title,
       source: args.source,
       cooklangSource: args.cooklangSource,
@@ -72,10 +85,13 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw new Error("Recipe not found")
     }
+    if (existing.userId !== identity.subject) throw new Error("Not authorized")
     const { id, ...updates } = args
     const patch: Record<string, unknown> = {}
     if (updates.title !== undefined) patch.title = updates.title
@@ -95,10 +111,13 @@ export const remove = mutation({
   args: { id: v.id("recipes") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw new Error("Recipe not found")
     }
+    if (existing.userId !== identity.subject) throw new Error("Not authorized")
     await ctx.db.delete(args.id)
     return null
   },
@@ -360,6 +379,8 @@ export const markCooked = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
     for (const deduction of args.deductions) {
       if (deduction.quantity < 0) {
         throw new Error("Deduction quantity cannot be negative")
@@ -367,7 +388,7 @@ export const markCooked = mutation({
     }
     for (const deduction of args.deductions) {
       const item = await ctx.db.get(deduction.pantryItemId)
-      if (item) {
+      if (item && item.userId === identity.subject) {
         const newQuantity = Math.max(0, item.quantity - deduction.quantity)
         await ctx.db.patch(deduction.pantryItemId, { quantity: newQuantity })
       }

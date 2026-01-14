@@ -14,12 +14,16 @@ export default defineSchema({
     .index("by_category", ["category"]),
 
   pantryItems: defineTable({
+    userId: v.string(),
     ingredientId: v.id("ingredients"),
     quantity: v.number(),
     unit: v.string(),
-  }).index("by_ingredient", ["ingredientId"]),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_ingredient", ["userId", "ingredientId"]),
 
   recipes: defineTable({
+    userId: v.string(),
     title: v.string(),
     source: v.optional(v.string()),
     cooklangSource: v.string(),
@@ -34,9 +38,12 @@ export default defineSchema({
     parsedSteps: v.array(v.string()),
     servings: v.optional(v.number()),
     image: v.optional(v.string()),
-  }).index("by_title", ["title"]),
+  })
+    .index("by_user", ["userId"])
+    .index("by_title", ["title"]),
 
   shoppingLists: defineTable({
+    userId: v.string(),
     name: v.string(),
     items: v.array(
       v.object({
@@ -46,5 +53,5 @@ export default defineSchema({
         checked: v.boolean(),
       })
     ),
-  }),
+  }).index("by_user", ["userId"]),
 })

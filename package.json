@@ -14,6 +14,7 @@
     "lint": "tsc && eslint .  --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.59.3",
     "@convex-dev/react-query": "^0.0.0-alpha.11",
     "@cooklang/cooklang": "^0.17.2",
     "@tanstack/react-query": "^5.89.0",
@@ -29,6 +30,7 @@
     "@convex-dev/eslint-plugin": "^1.1.1",
     "@tailwindcss/vite": "^4.1.13",
     "@tanstack/eslint-config": "^0.3.2",
+    "@types/node": "^25.0.8",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.3",

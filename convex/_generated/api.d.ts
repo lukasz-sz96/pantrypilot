@@ -14,6 +14,7 @@ import type * as recipes from "../recipes.js";
 import type * as seed from "../seed.js";
 import type * as shoppingLists from "../shoppingLists.js";
 import type * as storage from "../storage.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   shoppingLists: typeof shoppingLists;
   storage: typeof storage;
+  users: typeof users;
 }>;
 
 /**

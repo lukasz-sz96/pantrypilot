@@ -1,4 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router'
+import { UserButton } from '@clerk/clerk-react'
 
 const ChefHatIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
@@ -68,6 +69,16 @@ export const Navigation = () => {
             </Link>
           )
         })}
+        <Link to="/account" className={`nav-item nav-user ${location.pathname === '/account' ? 'active' : ''}`}>
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: 'w-7 h-7',
+              },
+            }}
+          />
+          <span className="nav-label">Account</span>
+        </Link>
       </div>
     </nav>
   )

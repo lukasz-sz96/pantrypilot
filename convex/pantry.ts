@@ -21,7 +21,12 @@ export const list = query({
     })
   ),
   handler: async (ctx) => {
-    const items = await ctx.db.query("pantryItems").collect()
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) return []
+    const items = await ctx.db
+      .query("pantryItems")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect()
     const ingredients = await Promise.all(
       items.map((item) => ctx.db.get(item.ingredientId))
     )
@@ -54,6 +59,8 @@ export const upsert = mutation({
   },
   returns: v.id("pantryItems"),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
     if (args.quantity < 0) {
       throw new Error("Quantity cannot be negative")
     }
@@ -66,7 +73,9 @@ export const upsert = mutation({
     }
     const existing = await ctx.db
       .query("pantryItems")
-      .withIndex("by_ingredient", (q) => q.eq("ingredientId", args.ingredientId))
+      .withIndex("by_user_ingredient", (q) =>
+        q.eq("userId", identity.subject).eq("ingredientId", args.ingredientId)
+      )
       .unique()
 
     if (existing) {
@@ -78,6 +87,7 @@ export const upsert = mutation({
     }
 
     return await ctx.db.insert("pantryItems", {
+      userId: identity.subject,
       ingredientId: args.ingredientId,
       quantity: args.quantity,
       unit: args.unit,
@@ -92,8 +102,11 @@ export const adjustQuantity = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
     const item = await ctx.db.get(args.id)
     if (!item) throw new Error("Pantry item not found")
+    if (item.userId !== identity.subject) throw new Error("Not authorized")
     const newQuantity = Math.max(0, item.quantity + args.delta)
     await ctx.db.patch(args.id, { quantity: newQuantity })
     return null
@@ -104,10 +117,13 @@ export const remove = mutation({
   args: { id: v.id("pantryItems") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error("Not authenticated")
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw new Error("Pantry item not found")
     }
+    if (existing.userId !== identity.subject) throw new Error("Not authorized")
     await ctx.db.delete(args.id)
     return null
   },
