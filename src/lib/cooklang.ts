@@ -1,4 +1,5 @@
 import { Parser } from "@cooklang/cooklang"
+import { normalizeUnit } from './units'
 
 export interface ParsedIngredient {
   originalText: string
@@ -48,7 +49,7 @@ function extractQuantityValue(
 
   // Extract unit
   if (typeof q.unit === 'string') {
-    unit = q.unit
+    unit = normalizeUnit(q.unit)
   }
 
   return {
@@ -156,7 +157,7 @@ export function parseIngredientLine(text: string): {
 
   if (match) {
     const quantityStr = match[1]
-    const unit = match[2]?.toLowerCase()
+    const unit = match[2] ? normalizeUnit(match[2]) : undefined
     const name = match[3]?.trim()
 
     // Parse quantity - handle fractions
@@ -318,7 +319,7 @@ function parseIngredientText(text: string): {
 
   if (match) {
     const quantity = match[1]?.trim()
-    const unit = match[2]?.toLowerCase()
+    const unit = match[2] ? normalizeUnit(match[2]) : undefined
     let name = match[3]?.trim() || ''
 
     const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i)
