@@ -3,7 +3,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useState, useEffect } from 'react'
-import { formatQuantity } from '../lib/units'
+import { convertUnit, canConvert, formatQuantity } from '../lib/units'
 
 const RecipeDetail = () => {
   const { recipeId } = Route.useParams()
@@ -604,6 +604,36 @@ const AddToShoppingListModal = ({
   )
 }
 
+function calculateDeduction(
+  recipeQty: number,
+  recipeUnit: string,
+  pantryQty: number,
+  pantryUnit: string
+): { deductQty: number; note?: string } {
+  // Same units - simple deduction
+  if (recipeUnit === pantryUnit) {
+    return { deductQty: Math.min(recipeQty, pantryQty) }
+  }
+
+  // Try to convert
+  if (canConvert(recipeUnit, pantryUnit)) {
+    const convertedRecipeQty = convertUnit(recipeQty, recipeUnit, pantryUnit)
+    if (convertedRecipeQty !== null) {
+      const deductQty = Math.min(convertedRecipeQty, pantryQty)
+      return {
+        deductQty: Math.round(deductQty * 100) / 100, // Round to 2 decimal places
+        note: `Recipe needs ${formatQuantity(recipeQty)} ${recipeUnit} (≈ ${formatQuantity(convertedRecipeQty)} ${pantryUnit})`
+      }
+    }
+  }
+
+  // Can't convert - show warning
+  return {
+    deductQty: 0,
+    note: `Unit mismatch: recipe uses ${recipeUnit}, pantry has ${pantryUnit}`
+  }
+}
+
 const MarkAsCookedModal = ({
   recipe,
   pantryItems,
@@ -643,10 +673,34 @@ const MarkAsCookedModal = ({
     const initial: Record<string, number> = {}
     deductibleIngredients.forEach((ing) => {
       if (ing.pantryItem) {
-        initial[ing.pantryItem._id] = ing.quantity || 1
+        const result = calculateDeduction(
+          ing.quantity || 1,
+          ing.unit || '',
+          ing.pantryItem.quantity,
+          ing.pantryItem.unit
+        )
+        initial[ing.pantryItem._id] = result.deductQty
       }
     })
     return initial
+  })
+
+  const [deductionNotes] = useState<Record<string, string>>(() => {
+    const initialNotes: Record<string, string> = {}
+    deductibleIngredients.forEach((ing) => {
+      if (ing.pantryItem) {
+        const result = calculateDeduction(
+          ing.quantity || 1,
+          ing.unit || '',
+          ing.pantryItem.quantity,
+          ing.pantryItem.unit
+        )
+        if (result.note) {
+          initialNotes[ing.pantryItem._id] = result.note
+        }
+      }
+    })
+    return initialNotes
   })
 
   const handleSave = async () => {
@@ -723,7 +777,7 @@ const MarkAsCookedModal = ({
                     onClick={() =>
                       setDeductions((d) => ({
                         ...d,
-                        [ing.pantryItem!._id]: Math.max(0, currentDeduction - 1),
+                        [ing.pantryItem!._id]: Math.max(0, currentDeduction - 0.5),
                       }))
                     }
                     className="w-10 h-10 rounded-full bg-warmgray/10 flex items-center justify-center text-espresso hover:bg-warmgray/20"
@@ -732,15 +786,15 @@ const MarkAsCookedModal = ({
                   </button>
                   <div className="flex-1 text-center">
                     <span className="text-2xl font-medium text-espresso">
-                      {currentDeduction}
+                      {formatQuantity(currentDeduction)}
                     </span>
-                    <span className="text-warmgray ml-1">{ing.unit || ing.pantryItem.unit}</span>
+                    <span className="text-warmgray ml-1">{ing.pantryItem.unit}</span>
                   </div>
                   <button
                     onClick={() =>
                       setDeductions((d) => ({
                         ...d,
-                        [ing.pantryItem!._id]: currentDeduction + 1,
+                        [ing.pantryItem!._id]: currentDeduction + 0.5,
                       }))
                     }
                     className="w-10 h-10 rounded-full bg-warmgray/10 flex items-center justify-center text-espresso hover:bg-warmgray/20"
@@ -748,6 +802,9 @@ const MarkAsCookedModal = ({
                     +
                   </button>
                 </div>
+                {deductionNotes[ing.pantryItem._id] && (
+                  <span className="deduction-note">{deductionNotes[ing.pantryItem._id]}</span>
+                )}
               </div>
             )
           })}
