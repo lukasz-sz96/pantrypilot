@@ -2,7 +2,8 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { formatQuantity } from '../lib/units'
 
 const RecipeDetail = () => {
   const { recipeId } = Route.useParams()
@@ -15,6 +16,13 @@ const RecipeDetail = () => {
   const [showCookMode, setShowCookMode] = useState(false)
   const [showMarkCooked, setShowMarkCooked] = useState(false)
   const [showAddToList, setShowAddToList] = useState(false)
+  const [currentServings, setCurrentServings] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (recipe && currentServings === null) {
+      setCurrentServings(recipe.servings || 4)
+    }
+  }, [recipe, currentServings])
 
   if (recipe === undefined) {
     return (
@@ -69,6 +77,10 @@ const RecipeDetail = () => {
     (i) => i.status === 'available'
   ).length
   const totalLinked = ingredientsWithStatus.filter((i) => i.ingredientId).length
+
+  // Calculate scale factor for servings adjustment
+  const baseServings = recipe?.servings || 4
+  const scaleFactor = currentServings ? currentServings / baseServings : 1
 
   if (showAddToList && pantryItems) {
     const missingIngredients = ingredientsWithStatus.filter(
@@ -141,6 +153,25 @@ const RecipeDetail = () => {
           </a>
         )}
 
+        {/* Servings control */}
+        <div className="servings-control">
+          <span>Servings:</span>
+          <button
+            onClick={() => setCurrentServings(Math.max(1, (currentServings || baseServings) - 1))}
+            disabled={currentServings === 1}
+            className="servings-btn"
+          >
+            −
+          </button>
+          <span className="servings-value">{currentServings}</span>
+          <button
+            onClick={() => setCurrentServings((currentServings || baseServings) + 1)}
+            className="servings-btn"
+          >
+            +
+          </button>
+        </div>
+
         {/* Ingredient availability summary */}
         {totalLinked > 0 && (
           <div className="bg-cream rounded-xl p-4">
@@ -177,36 +208,40 @@ const RecipeDetail = () => {
         <section>
           <h2 className="text-lg font-display text-espresso mb-3">Ingredients</h2>
           <div className="space-y-2">
-            {ingredientsWithStatus.map((ing, idx) => (
-              <div
-                key={idx}
-                className="flex items-center gap-3 p-3 bg-cream rounded-xl"
-              >
+            {ingredientsWithStatus.map((ing, idx) => {
+              const scaledQuantity = ing.quantity ? ing.quantity * scaleFactor : undefined
+              const displayQuantity = scaledQuantity ? formatQuantity(scaledQuantity) : ''
+              return (
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
-                    ing.status === 'available'
-                      ? 'bg-sage/20 text-sage'
-                      : ing.status === 'missing' || ing.status === 'empty'
-                        ? 'bg-terracotta/20 text-terracotta'
-                        : 'bg-warmgray/20 text-warmgray'
-                  }`}
+                  key={idx}
+                  className="flex items-center gap-3 p-3 bg-cream rounded-xl"
                 >
-                  {ing.status === 'available' ? '✓' : ing.status === 'unknown' ? '?' : '✕'}
-                </div>
-                <div className="flex-1">
-                  <span className="text-espresso">
-                    {ing.quantity && `${ing.quantity} `}
-                    {ing.unit && `${ing.unit} `}
-                    {ing.linkedName || ing.originalText}
-                  </span>
-                  {ing.linkedName && ing.linkedName !== ing.originalText && (
-                    <span className="text-xs text-warmgray ml-2">
-                      ({ing.originalText})
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                      ing.status === 'available'
+                        ? 'bg-sage/20 text-sage'
+                        : ing.status === 'missing' || ing.status === 'empty'
+                          ? 'bg-terracotta/20 text-terracotta'
+                          : 'bg-warmgray/20 text-warmgray'
+                    }`}
+                  >
+                    {ing.status === 'available' ? '✓' : ing.status === 'unknown' ? '?' : '✕'}
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-espresso">
+                      {displayQuantity && `${displayQuantity} `}
+                      {ing.unit && `${ing.unit} `}
+                      {ing.linkedName || ing.originalText}
                     </span>
-                  )}
+                    {ing.linkedName && ing.linkedName !== ing.originalText && (
+                      <span className="text-xs text-warmgray ml-2">
+                        ({ing.originalText})
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
 

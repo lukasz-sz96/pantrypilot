@@ -231,6 +231,46 @@
     font-weight: 600;
     color: var(--color-espresso);
   }
+
+  .servings-control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-cream);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .servings-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--color-sage);
+    background: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .servings-btn:hover:not(:disabled) {
+    background: var(--color-sage);
+    color: white;
+  }
+
+  .servings-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .servings-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    min-width: 2rem;
+    text-align: center;
+  }
 }
 
 @layer utilities {
