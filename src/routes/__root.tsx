@@ -4,9 +4,30 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from '@tanstack/react-router'
-import * as React from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import appCss from '~/styles/app.css?url'
+import { Navigation } from '~/components/Navigation'
+
+const RootDocument = ({ children }: { children: React.ReactNode }) => (
+  <html>
+    <head>
+      <HeadContent />
+    </head>
+    <body>
+      {children}
+      <Scripts />
+    </body>
+  </html>
+)
+
+const RootComponent = () => (
+  <RootDocument>
+    <main className="main-content">
+      <Outlet />
+    </main>
+    <Navigation />
+  </RootDocument>
+)
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
@@ -29,25 +50,3 @@ export const Route = createRootRouteWithContext<{
   notFoundComponent: () => <div>Route not found</div>,
   component: RootComponent,
 })
-
-function RootComponent() {
-  return (
-    <RootDocument>
-      <Outlet />
-    </RootDocument>
-  )
-}
-
-function RootDocument({ children }: { children: React.ReactNode }) {
-  return (
-    <html>
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  )
-}

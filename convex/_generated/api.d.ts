@@ -8,13 +8,25 @@
  * @module
  */
 
+import type * as ingredients from "../ingredients.js";
+import type * as pantry from "../pantry.js";
+import type * as recipes from "../recipes.js";
+import type * as seed from "../seed.js";
+import type * as shoppingLists from "../shoppingLists.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  ingredients: typeof ingredients;
+  pantry: typeof pantry;
+  recipes: typeof recipes;
+  seed: typeof seed;
+  shoppingLists: typeof shoppingLists;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

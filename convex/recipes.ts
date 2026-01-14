@@ -89,7 +89,7 @@ export const importFromUrl = action({
     cooklangSource: v.string(),
     title: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const cookMdUrl = `https://cook.md/${args.url}`
     const response = await fetch(cookMdUrl)
     if (!response.ok) {
@@ -97,7 +97,6 @@ export const importFromUrl = action({
     }
     const cooklangSource = await response.text()
 
-    // Extract title from first line or use URL
     const lines = cooklangSource.split("\n")
     const titleLine = lines.find((l) => l.startsWith(">>") || l.startsWith("#"))
     const title = titleLine
