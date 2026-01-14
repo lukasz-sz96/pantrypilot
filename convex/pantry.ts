@@ -13,7 +13,7 @@ export const list = query({
       ingredient: v.object({
         _id: v.id("ingredients"),
         name: v.string(),
-        aliases: v.array(v.string()),
+        aliases: v.optional(v.array(v.string())),
         category: v.string(),
         isStaple: v.boolean(),
         defaultUnit: v.string(),

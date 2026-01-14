@@ -6,7 +6,7 @@ const ingredientValidator = v.object({
   _creationTime: v.number(),
   name: v.string(),
   normalizedName: v.string(),
-  aliases: v.array(v.string()),
+  aliases: v.optional(v.array(v.string())),
   category: v.string(),
   isStaple: v.boolean(),
   defaultUnit: v.string(),
@@ -29,7 +29,7 @@ export const search = query({
     const all = await ctx.db.query("ingredients").collect()
     return all.filter((i) =>
       i.normalizedName.includes(normalized) ||
-      i.aliases.some((a) => a.toLowerCase().includes(normalized))
+      (i.aliases && i.aliases.some((a) => a.toLowerCase().includes(normalized)))
     )
   },
 })
@@ -43,7 +43,7 @@ export const findByText = query({
     const all = await ctx.db.query("ingredients").collect()
     return all.find((i) =>
       i.normalizedName === normalized ||
-      i.aliases.some((a) => a.toLowerCase() === normalized)
+      (i.aliases && i.aliases.some((a) => a.toLowerCase() === normalized))
     ) ?? null
   },
 })
@@ -106,9 +106,10 @@ export const addAlias = mutation({
     const ingredient = await ctx.db.get(args.id)
     if (!ingredient) throw new Error("Ingredient not found")
     const normalizedAlias = args.alias.toLowerCase().trim()
-    if (!ingredient.aliases.some((a) => a.toLowerCase() === normalizedAlias)) {
+    const currentAliases = ingredient.aliases ?? []
+    if (!currentAliases.some((a) => a.toLowerCase() === normalizedAlias)) {
       await ctx.db.patch(args.id, {
-        aliases: [...ingredient.aliases, args.alias],
+        aliases: [...currentAliases, args.alias],
       })
     }
     return null

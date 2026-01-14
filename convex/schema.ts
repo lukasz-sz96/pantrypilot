@@ -5,7 +5,7 @@ export default defineSchema({
   ingredients: defineTable({
     name: v.string(),
     normalizedName: v.string(),
-    aliases: v.array(v.string()),
+    aliases: v.optional(v.array(v.string())),
     category: v.string(),
     isStaple: v.boolean(),
     defaultUnit: v.string(),
