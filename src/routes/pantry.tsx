@@ -3,6 +3,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useState } from 'react'
+import { UnitPicker } from '../components/UnitPicker'
 
 type PantryItem = {
   _id: Id<'pantryItems'>
@@ -64,7 +65,7 @@ const PantryItemCard = ({ item, onAdjust, onRemove }: {
 const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
   const [search, setSearch] = useState('')
   const [quantity, setQuantity] = useState('1')
-  const [unit, setUnit] = useState('')
+  const [unit, setUnit] = useState('piece')
   const [selectedIngredient, setSelectedIngredient] = useState<{
     _id: Id<'ingredients'>
     name: string
@@ -221,11 +222,10 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
               </label>
               <label className="flex-1">
                 <span className="block text-sm font-medium text-espresso mb-1">Unit</span>
-                <input
-                  type="text"
+                <UnitPicker
                   value={unit || newDefaultUnit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage"
+                  onChange={setUnit}
+                  className="w-full px-4 py-3 rounded-xl"
                 />
               </label>
             </div>
@@ -268,11 +268,10 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
               </label>
               <label className="flex-1">
                 <span className="block text-sm font-medium text-espresso mb-1">Unit</span>
-                <input
-                  type="text"
+                <UnitPicker
                   value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage"
+                  onChange={setUnit}
+                  className="w-full px-4 py-3 rounded-xl"
                 />
               </label>
             </div>
@@ -280,7 +279,7 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
               <button
                 onClick={() => {
                   setSelectedIngredient(null)
-                  setUnit('')
+                  setUnit('piece')
                 }}
                 className="flex-1 py-3 rounded-xl border border-warmgray/30 text-espresso hover:bg-warmgray/10 transition-colors"
               >

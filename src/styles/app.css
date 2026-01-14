@@ -208,6 +208,29 @@
     background-color: var(--color-sage-light);
     color: var(--color-sage-dark);
   }
+
+  .unit-picker {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-sage);
+    border-radius: 8px;
+    background: var(--color-cream);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--color-espresso);
+    cursor: pointer;
+    min-width: 80px;
+  }
+
+  .unit-picker:focus {
+    outline: none;
+    border-color: var(--color-terracotta);
+    box-shadow: 0 0 0 2px rgba(198, 111, 78, 0.2);
+  }
+
+  .unit-picker optgroup {
+    font-weight: 600;
+    color: var(--color-espresso);
+  }
 }
 
 @layer utilities {
