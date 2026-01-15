@@ -1,32 +1,23 @@
 services:
-  app:
+  pantrypilot:
     image: ghcr.io/${GITHUB_REPOSITORY:-pantrypilot}:latest
     ports:
       - "3000:3000"
+      - "3210:3210"
+      - "6791:6791"
+      - "8080:8080"
+    volumes:
+      - convex-data:/convex/data
     environment:
-      - VITE_CONVEX_URL=${VITE_CONVEX_URL}
-      - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
-    depends_on:
-      cooklang-import:
-        condition: service_healthy
-    restart: unless-stopped
-
-  cooklang-import:
-    build:
-      context: ./services/cooklang-import
-      dockerfile: Dockerfile
-    ports:
-      - "8090:8080"
-    environment:
+      - VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY:-}
+      - CLERK_JWT_ISSUER_DOMAIN=${CLERK_JWT_ISSUER_DOMAIN:-}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-anthropic/claude-3.5-sonnet}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_HOST=${OLLAMA_HOST:-}
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+
+volumes:
+  convex-data:
