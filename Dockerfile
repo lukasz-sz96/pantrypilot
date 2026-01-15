@@ -7,7 +7,7 @@ RUN npm ci
 
 COPY . .
 
-RUN npm run build
+RUN rm -rf .vinxi .output node_modules/.vite node_modules/.cache && npm run build
 
 FROM rust:1.83-slim-bookworm AS cooklang-builder
 
