@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Source+Sans+3:wght@400;500;600;700&display=swap');
-@import "tailwindcss/theme.css" layer(theme) source(none);
-@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "tailwindcss" source("../..");
 
 @theme {
   --color-cream: #FDF8F3;
