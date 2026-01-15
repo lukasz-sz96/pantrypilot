@@ -51,7 +51,7 @@ RUN pip3 install --no-cache-dir --break-system-packages fastapi uvicorn httpx
 
 WORKDIR /app
 
-COPY --from=node-builder /app/dist ./dist
+COPY --from=node-builder /app/.output ./.output
 COPY --from=node-builder /app/package.json ./
 COPY --from=node-builder /app/package-lock.json ./
 
