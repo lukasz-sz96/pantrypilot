@@ -91,22 +91,61 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
 
 ### Docker Deployment
 
-1. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your values
-   ```
+The Docker image is an all-in-one container that includes:
+- PantryPilot web app (port 3000)
+- Self-hosted Convex backend (port 3210)
+- Convex dashboard (port 6791)
+- Cooklang import service (port 8080)
 
-2. **Run with Docker Compose**
-   ```bash
-   docker compose up -d
-   ```
+#### Quick Start
 
-   Or pull from GitHub Container Registry:
-   ```bash
-   docker compose pull
-   docker compose up -d
-   ```
+```bash
+docker run -d \
+  -p 3000:3000 \
+  -p 3210:3210 \
+  -v pantrypilot-data:/convex/data \
+  -e VITE_CONVEX_URL=http://YOUR_IP:3210 \
+  -e VITE_CLERK_PUBLISHABLE_KEY=pk_... \
+  -e CLERK_JWT_ISSUER_DOMAIN=https://your-app.clerk.accounts.dev \
+  ghcr.io/yourusername/pantrypilot:latest
+```
+
+#### Docker Compose
+
+```bash
+docker compose up -d
+```
+
+#### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_CONVEX_URL` | Yes | Convex backend URL (e.g., `http://192.168.1.100:3210`) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
+| `CLERK_JWT_ISSUER_DOMAIN` | Yes | Clerk JWT issuer domain |
+| `OPENROUTER_API_KEY` | No | OpenRouter API key for AI recipe import |
+| `OPENROUTER_MODEL` | No | AI model (default: `anthropic/claude-3.5-sonnet`) |
+
+#### Ports
+
+| Port | Service | Required |
+|------|---------|----------|
+| 3000 | Web UI | Yes |
+| 3210 | Convex backend | Yes |
+| 6791 | Convex dashboard | No |
+| 8080 | Recipe import API | No |
+
+#### Volume
+
+Mount `/convex/data` to persist your database.
+
+#### Unraid
+
+Add a new container with:
+- **Repository**: `ghcr.io/yourusername/pantrypilot:latest`
+- **Ports**: 3000, 3210 (optional: 6791, 8080)
+- **Path**: `/convex/data` → `/mnt/user/appdata/pantrypilot`
+- **Variables**: See environment variables table above
 
 ## Project Structure
 
