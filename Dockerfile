@@ -2,12 +2,6 @@ FROM node:22-bookworm AS node-builder
 
 WORKDIR /app
 
-ARG VITE_CONVEX_URL=http://localhost:3210
-ARG VITE_CLERK_PUBLISHABLE_KEY=
-
-ENV VITE_CONVEX_URL=$VITE_CONVEX_URL
-ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
-
 COPY package.json package-lock.json ./
 RUN npm ci
 

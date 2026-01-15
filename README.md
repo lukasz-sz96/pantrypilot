@@ -97,20 +97,7 @@ The Docker image is an all-in-one container that includes:
 - Convex dashboard (port 6791)
 - Cooklang import service (port 8080)
 
-#### Building the Image
-
-**Important:** `VITE_*` variables are baked into the frontend at build time. You must pass them as build arguments:
-
-```bash
-docker build \
-  --build-arg VITE_CONVEX_URL=http://YOUR_SERVER_IP:3210 \
-  --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_... \
-  -t pantrypilot .
-```
-
-Replace `YOUR_SERVER_IP` with the IP address or hostname where the container will run. The browser connects directly to Convex, so this must be accessible from the client's network.
-
-#### Running the Container
+#### Quick Start
 
 ```bash
 docker run -d \
@@ -118,27 +105,22 @@ docker run -d \
   -p 3210:3210 \
   -v pantrypilot-data:/convex/data \
   -e TZ=UTC \
+  -e CONVEX_URL=http://YOUR_IP:3210 \
+  -e CLERK_PUBLISHABLE_KEY=pk_test_... \
   -e CLERK_JWT_ISSUER_DOMAIN=https://your-app.clerk.accounts.dev \
   pantrypilot
 ```
 
-#### Build Arguments (Build Time)
+Replace `YOUR_IP` with your server's IP address (the browser connects directly to Convex).
 
-These are embedded into the frontend bundle during build:
-
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `VITE_CONVEX_URL` | Yes | Convex backend URL accessible from browser (e.g., `http://192.168.1.100:3210`) |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
-
-#### Environment Variables (Run Time)
-
-These can be set when running the container:
+#### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `TZ` | Yes | Must be `UTC` (Convex requirement) |
+| `CONVEX_URL` | Yes | Convex backend URL accessible from browser (e.g., `http://192.168.1.100:3210`) |
+| `CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
 | `CLERK_JWT_ISSUER_DOMAIN` | Yes | Clerk JWT issuer domain |
+| `TZ` | Yes | Must be `UTC` (Convex requirement) |
 | `OPENROUTER_API_KEY` | No | OpenRouter API key for AI recipe import |
 | `OPENROUTER_MODEL` | No | AI model (default: `anthropic/claude-3.5-sonnet`) |
 
@@ -155,31 +137,13 @@ These can be set when running the container:
 
 Mount `/convex/data` to persist your database.
 
-#### Unraid Deployment
+#### Unraid
 
-1. **Build the image** on a machine with Docker:
-   ```bash
-   docker build \
-     --build-arg VITE_CONVEX_URL=http://YOUR_UNRAID_IP:3210 \
-     --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_... \
-     -t pantrypilot .
-   ```
-
-2. **Push to a registry** (or save/load the image):
-   ```bash
-   docker tag pantrypilot your-registry/pantrypilot:latest
-   docker push your-registry/pantrypilot:latest
-   ```
-
-3. **Add container in Unraid**:
-   - **Repository**: `your-registry/pantrypilot:latest`
-   - **Port Mappings**:
-     - Container 3000 → Host (your choice)
-     - Container 3210 → Host 3210 (must match VITE_CONVEX_URL)
-   - **Volume**: `/convex/data` → `/mnt/user/appdata/pantrypilot`
-   - **Variables**:
-     - `TZ` = `UTC`
-     - `CLERK_JWT_ISSUER_DOMAIN` = `https://your-app.clerk.accounts.dev`
+Add container with:
+- **Repository**: `ghcr.io/yourusername/pantrypilot:latest`
+- **Ports**: 3000, 3210 (optional: 6791, 8080)
+- **Path**: `/convex/data` → `/mnt/user/appdata/pantrypilot`
+- **Variables**: See table above
 
 ## Project Structure
 

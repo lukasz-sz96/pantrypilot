@@ -13,17 +13,29 @@ import appCss from '~/styles/app.css?url'
 import { Navigation } from '~/components/Navigation'
 import { AppInitializer } from '~/components/AppInitializer'
 
-const RootDocument = ({ children }: { children: React.ReactNode }) => (
-  <html>
-    <head>
-      <HeadContent />
-    </head>
-    <body>
-      {children}
-      <Scripts />
-    </body>
-  </html>
-)
+const getServerConfig = () => {
+  if (typeof window !== 'undefined') return null
+  return JSON.stringify({
+    CONVEX_URL: process.env.CONVEX_URL || '',
+    CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY || '',
+  })
+}
+
+const RootDocument = ({ children }: { children: React.ReactNode }) => {
+  const config = getServerConfig()
+  return (
+    <html>
+      <head>
+        {config && <script dangerouslySetInnerHTML={{ __html: `window.__CONFIG__=${config}` }} />}
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  )
+}
 
 const AUTH_ROUTES = ['/sign-in', '/sign-up']
 
