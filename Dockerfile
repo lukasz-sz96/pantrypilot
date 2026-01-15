@@ -39,7 +39,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=convex-backend /convex/bin/convex-local-backend /usr/local/bin/convex-local-backend
+COPY --from=convex-backend /convex/convex-local-backend /usr/local/bin/convex-local-backend
 
 COPY --from=convex-dashboard /app /app/convex-dashboard
 
@@ -59,59 +59,7 @@ COPY services/cooklang-import/server.py /app/cooklang-import/server.py
 
 RUN mkdir -p /convex/data /var/log/supervisor
 
-COPY <<'EOF' /etc/supervisord.conf
-[supervisord]
-nodaemon=true
-logfile=/var/log/supervisor/supervisord.log
-pidfile=/var/run/supervisord.pid
-user=root
-
-[program:convex-backend]
-command=/usr/local/bin/convex-local-backend --port 3210 --site-proxy-port 3211
-directory=/convex/data
-autostart=true
-autorestart=true
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-priority=1
-
-[program:cooklang-import]
-command=uvicorn server:app --host 0.0.0.0 --port 8080
-directory=/app/cooklang-import
-autostart=true
-autorestart=true
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-priority=3
-
-[program:convex-dashboard]
-command=node /app/convex-dashboard/server.js
-directory=/app/convex-dashboard
-environment=PORT="6791",NEXT_PUBLIC_DEPLOYMENT_URL="http://localhost:3210"
-autostart=true
-autorestart=true
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-priority=2
-
-[program:app]
-command=node /app/dist/server/server.js
-directory=/app
-autostart=true
-autorestart=true
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-priority=4
-startsecs=5
-EOF
+COPY --from=node-builder /app/supervisord.conf /etc/supervisord.conf
 
 ENV NODE_ENV=production
 ENV VITE_CONVEX_URL=http://localhost:3210
