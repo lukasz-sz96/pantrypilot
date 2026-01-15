@@ -6,17 +6,15 @@ import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import { ClerkProvider, useAuth } from '@clerk/clerk-react'
 import { routeTree } from './routeTree.gen'
 
-const getEnv = (viteKey: string, nodeKey: string) => {
-  if (typeof process !== 'undefined' && process.env?.[nodeKey]) {
-    return process.env[nodeKey]
-  }
-  return (import.meta as any).env?.[viteKey]
-}
+const CONVEX_URL =
+  process.env.CONVEX_URL || (import.meta as any).env?.VITE_CONVEX_URL || ''
 
-const CLERK_PUBLISHABLE_KEY = getEnv('VITE_CLERK_PUBLISHABLE_KEY', 'CLERK_PUBLISHABLE_KEY')
+const CLERK_PUBLISHABLE_KEY =
+  process.env.CLERK_PUBLISHABLE_KEY ||
+  (import.meta as any).env?.VITE_CLERK_PUBLISHABLE_KEY ||
+  ''
 
 export function getRouter() {
-  const CONVEX_URL = getEnv('VITE_CONVEX_URL', 'CONVEX_URL')!
   if (!CONVEX_URL) {
     console.error('missing envar CONVEX_URL')
   }

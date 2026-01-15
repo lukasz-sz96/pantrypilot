@@ -17,10 +17,20 @@ export default defineConfig({
       projects: ['./tsconfig.json'],
     }),
     tanstackStart(),
-    nitro({ preset: 'node' }),
+    nitro({
+      preset: 'node',
+      runtimeConfig: {
+        convexUrl: '',
+        clerkPublishableKey: '',
+      },
+    }),
     viteReact(),
   ],
   optimizeDeps: {
     exclude: ['@cooklang/cooklang'],
+  },
+  define: {
+    'process.env.CONVEX_URL': 'process.env.CONVEX_URL',
+    'process.env.CLERK_PUBLISHABLE_KEY': 'process.env.CLERK_PUBLISHABLE_KEY',
   },
 })
