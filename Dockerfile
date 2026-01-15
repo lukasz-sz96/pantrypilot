@@ -27,12 +27,14 @@ FROM ghcr.io/get-convex/convex-backend:latest AS convex-backend
 
 FROM ghcr.io/get-convex/convex-dashboard:latest AS convex-dashboard
 
-FROM python:3.11-slim-bookworm AS runner
+FROM ubuntu:24.04 AS runner
 
 RUN apt-get update && apt-get install -y \
     curl \
     supervisor \
     ca-certificates \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
@@ -45,7 +47,7 @@ COPY --from=convex-dashboard /app /app/convex-dashboard
 
 COPY --from=cooklang-builder /build/target/release/cooklang-import /usr/local/bin/cooklang-import
 
-RUN pip install --no-cache-dir fastapi uvicorn httpx
+RUN pip3 install --no-cache-dir --break-system-packages fastapi uvicorn httpx
 
 WORKDIR /app
 
