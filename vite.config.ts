@@ -29,8 +29,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['@cooklang/cooklang'],
   },
-  define: {
-    'process.env.CONVEX_URL': 'process.env.CONVEX_URL',
-    'process.env.CLERK_PUBLISHABLE_KEY': 'process.env.CLERK_PUBLISHABLE_KEY',
+  ssr: {
+    noExternal: [],
   },
 })
