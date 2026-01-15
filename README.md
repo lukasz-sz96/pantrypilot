@@ -91,59 +91,49 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
 
 ### Docker Deployment
 
-The Docker image is an all-in-one container that includes:
+The Docker image includes:
 - PantryPilot web app (port 3000)
-- Self-hosted Convex backend (port 3210)
-- Convex dashboard (port 6791)
 - Cooklang import service (port 8080)
+
+Uses [Convex Cloud](https://convex.dev) for the database (free tier available).
+
+#### Prerequisites
+
+1. **Create Convex project**: Run `npx convex dev` locally, then `npx convex deploy`
+2. **Configure Clerk JWT**: In Clerk Dashboard → JWT Templates → Create "Convex" template
 
 #### Quick Start
 
 ```bash
 docker run -d \
   -p 3000:3000 \
-  -p 3210:3210 \
-  -v pantrypilot-data:/convex/data \
-  -e TZ=UTC \
-  -e CONVEX_URL=http://YOUR_IP:3210 \
+  -e CONVEX_URL=https://your-project.convex.cloud \
   -e CLERK_PUBLISHABLE_KEY=pk_test_... \
-  -e CLERK_JWT_ISSUER_DOMAIN=https://your-app.clerk.accounts.dev \
   pantrypilot
 ```
-
-Replace `YOUR_IP` with your server's IP address (the browser connects directly to Convex).
 
 #### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `CONVEX_URL` | Yes | Convex backend URL accessible from browser (e.g., `http://192.168.1.100:3210`) |
+| `CONVEX_URL` | Yes | Convex Cloud URL (e.g., `https://your-project.convex.cloud`) |
 | `CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
-| `CLERK_JWT_ISSUER_DOMAIN` | Yes | Clerk JWT issuer domain |
-| `TZ` | Yes | Must be `UTC` (Convex requirement) |
 | `OPENROUTER_API_KEY` | No | OpenRouter API key for AI recipe import |
 | `OPENROUTER_MODEL` | No | AI model (default: `anthropic/claude-3.5-sonnet`) |
 
 #### Ports
 
-| Port | Service | Required |
-|------|---------|----------|
-| 3000 | Web UI | Yes |
-| 3210 | Convex backend | Yes (browser connects directly) |
-| 6791 | Convex dashboard | No |
-| 8080 | Recipe import API | No |
-
-#### Volume
-
-Mount `/convex/data` to persist your database.
+| Port | Service |
+|------|---------|
+| 3000 | Web UI |
+| 8080 | Recipe import API (optional) |
 
 #### Unraid
 
 Add container with:
 - **Repository**: `ghcr.io/yourusername/pantrypilot:latest`
-- **Ports**: 3000, 3210 (optional: 6791, 8080)
-- **Path**: `/convex/data` → `/mnt/user/appdata/pantrypilot`
-- **Variables**: See table above
+- **Port**: 3000 → your choice
+- **Variables**: `CONVEX_URL`, `CLERK_PUBLISHABLE_KEY`
 
 ## Project Structure
 
