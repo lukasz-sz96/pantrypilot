@@ -6,22 +6,8 @@ import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import { ClerkProvider, useAuth } from '@clerk/clerk-react'
 import { routeTree } from './routeTree.gen'
 
-const getServerEnv = (key: string): string | undefined => {
-  if (typeof globalThis !== 'undefined' && typeof (globalThis as any).process !== 'undefined') {
-    return (globalThis as any).process.env?.[key]
-  }
-  return undefined
-}
-
-const CONVEX_URL =
-  getServerEnv('CONVEX_URL') ||
-  (typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_CONVEX_URL : '') ||
-  ''
-
-const CLERK_PUBLISHABLE_KEY =
-  getServerEnv('CLERK_PUBLISHABLE_KEY') ||
-  (typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_CLERK_PUBLISHABLE_KEY : '') ||
-  ''
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL || ''
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || ''
 
 export function getRouter() {
   if (!CONVEX_URL) {

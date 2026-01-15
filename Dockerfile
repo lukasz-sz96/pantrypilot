@@ -2,6 +2,12 @@ FROM node:22-bookworm AS node-builder
 
 WORKDIR /app
 
+ARG VITE_CONVEX_URL=http://localhost:3210
+ARG VITE_CLERK_PUBLISHABLE_KEY=
+
+ENV VITE_CONVEX_URL=$VITE_CONVEX_URL
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
@@ -64,7 +70,6 @@ RUN mkdir -p /convex/data /var/log/supervisor
 COPY --from=node-builder /app/supervisord.conf /etc/supervisord.conf
 
 ENV NODE_ENV=production
-ENV VITE_CONVEX_URL=http://localhost:3210
 
 EXPOSE 3000 3210 3211 6791 8080
 
