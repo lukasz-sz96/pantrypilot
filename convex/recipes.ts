@@ -262,7 +262,77 @@ function extractJsonLdRecipe(html: string): RecipeSchema | null {
   return null
 }
 
-const COOKLANG_IMPORT_URL = "http://localhost:8090"
+const COOKLANG_PROMPT = `Convert this recipe to Cooklang format. Output ONLY raw Cooklang, no markdown code blocks.
+
+Rules:
+- Start with metadata block using --- delimiters (title, servings)
+- Each step is a separate paragraph with inline ingredients
+- Use @ingredient{quantity%unit} for ingredients (e.g., @flour{2%cups})
+- Use @ingredient{quantity} if no unit (e.g., @eggs{3})
+- Use @ingredient{} if no quantity
+- Use #cookware{} for equipment
+- Use ~{time%unit} for timers
+- Do NOT list ingredients separately - they must be inline within steps
+- Do NOT include: water, ice, pasta water, or non-purchasable items
+
+Example format:
+---
+title: Pasta
+servings: 4
+---
+
+Boil @pasta{400%g} in salted water for ~{10%minutes}.
+
+Heat @olive oil{2%tbsp} in a #pan.
+
+Recipe to convert:
+`
+
+function stripMarkdownCodeBlocks(text: string): string {
+  let result = text.trim()
+  result = result.replace(/^```\w*\n?/, '')
+  result = result.replace(/\n?```$/, '')
+  return result.trim()
+}
+
+function extractImageFromHtml(html: string): string | undefined {
+  const jsonLdMatches = html.matchAll(
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  )
+
+  for (const match of jsonLdMatches) {
+    try {
+      const json = JSON.parse(match[1])
+      const items = json["@graph"] || (Array.isArray(json) ? json : [json])
+      for (const item of items) {
+        const types = Array.isArray(item["@type"]) ? item["@type"] : [item["@type"]]
+        if (types.includes("Recipe") && item.image) {
+          const img = Array.isArray(item.image) ? item.image[0] : item.image
+          if (typeof img === "string") return img
+          if (img?.url) return img.url
+          if (img?.contentUrl) return img.contentUrl
+        }
+      }
+    } catch {
+      continue
+    }
+  }
+
+  const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+    || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i)
+  if (ogMatch) return ogMatch[1]
+
+  return undefined
+}
+
+function extractTitleFromCooklang(cooklang: string): string | undefined {
+  for (const line of cooklang.split("\n")) {
+    if (line.startsWith("title:")) {
+      return line.split(":", 1)[1]?.trim()
+    }
+  }
+  return undefined
+}
 
 export const importFromUrl = action({
   args: { url: v.string() },
@@ -284,40 +354,6 @@ export const importFromUrl = action({
       throw new Error("URL must use http or https protocol")
     }
 
-    try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 30000)
-      const response = await fetch(`${COOKLANG_IMPORT_URL}/import/url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: args.url }),
-        signal: controller.signal,
-      })
-      clearTimeout(timeout)
-
-      if (response.ok) {
-        const result = await response.json()
-        // Parse servings from the result if available
-        let servings: number | undefined
-        if (result.servings) {
-          const parsed = parseInt(String(result.servings))
-          if (!isNaN(parsed) && parsed > 0) {
-            servings = parsed
-          }
-        }
-        // Extract image if available
-        const image = result.image || undefined
-        return {
-          cooklangSource: result.cooklang,
-          title: result.title || "Imported Recipe",
-          servings,
-          image,
-        }
-      }
-    } catch {
-      // Fall back to JSON-LD extraction
-    }
-
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30000)
     const response = await fetch(args.url, {
@@ -334,16 +370,49 @@ export const importFromUrl = action({
     }
 
     const html = await response.text()
+    const image = extractImageFromHtml(html)
+
+    const openrouterKey = process.env.OPENROUTER_API_KEY
+    if (openrouterKey) {
+      try {
+        const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${openrouterKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: process.env.OPENROUTER_MODEL || "anthropic/claude-3.5-sonnet",
+            messages: [{ role: "user", content: COOKLANG_PROMPT + html.slice(0, 50000) }],
+            max_tokens: 4000,
+          }),
+        })
+
+        if (aiResponse.ok) {
+          const data = await aiResponse.json()
+          const content = data.choices?.[0]?.message?.content
+          if (content) {
+            const cooklangSource = stripMarkdownCodeBlocks(content)
+            const title = extractTitleFromCooklang(cooklangSource) || "Imported Recipe"
+            const servingsMatch = cooklangSource.match(/servings:\s*(\d+)/)
+            const servings = servingsMatch ? parseInt(servingsMatch[1]) : undefined
+            return { cooklangSource, title, servings, image }
+          }
+        }
+      } catch {
+        // Fall back to JSON-LD extraction
+      }
+    }
+
     const recipeSchema = extractJsonLdRecipe(html)
 
     if (!recipeSchema) {
-      throw new Error("No recipe data found on this page.")
+      throw new Error("No recipe data found. Set OPENROUTER_API_KEY in Convex for AI extraction.")
     }
 
     const cooklangSource = recipeSchemaTooCooklang(recipeSchema)
     const title = recipeSchema.name
 
-    // Parse servings from recipeYield
     let servings: number | undefined
     if (recipeSchema.recipeYield) {
       const yieldStr = String(recipeSchema.recipeYield)
@@ -353,17 +422,12 @@ export const importFromUrl = action({
       }
     }
 
-    // Extract image - can be string or array
-    let image: string | undefined
+    let schemaImage: string | undefined
     if (recipeSchema.image) {
-      if (Array.isArray(recipeSchema.image)) {
-        image = recipeSchema.image[0]
-      } else {
-        image = recipeSchema.image
-      }
+      schemaImage = Array.isArray(recipeSchema.image) ? recipeSchema.image[0] : recipeSchema.image
     }
 
-    return { cooklangSource, title, servings, image }
+    return { cooklangSource, title, servings, image: image || schemaImage }
   },
 })
 
