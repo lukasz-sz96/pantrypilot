@@ -216,8 +216,8 @@ const Shopping = () => {
 
       {/* Add Item Modal */}
       {addingToList && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-          <div className="bg-cream w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-6 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[60]">
+          <div className="bg-cream w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom)+5rem)] sm:pb-6 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-xl text-espresso">Add Item</h2>
               <button

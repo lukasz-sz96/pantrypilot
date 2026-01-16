@@ -115,8 +115,8 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
   const categories = ['Produce', 'Meat', 'Dairy', 'Grains', 'Spices', 'Condiments', 'Frozen', 'Canned', 'Other']
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-cream w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[60]">
+      <div className="bg-cream w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom)+5rem)] sm:pb-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-display text-espresso">Add to Pantry</h2>
           <button

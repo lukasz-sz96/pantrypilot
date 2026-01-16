@@ -337,7 +337,7 @@ const RecipeDetail = () => {
       </div>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-cream rounded-2xl p-6 max-w-sm w-full">
             <h2 className="font-display text-xl text-espresso mb-2">Delete Recipe?</h2>
             <p className="text-warmgray mb-6">
@@ -365,7 +365,7 @@ const RecipeDetail = () => {
       )}
 
       {showEditImage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-cream rounded-2xl p-6 max-w-md w-full">
             <h2 className="font-display text-xl text-espresso mb-4">Recipe Image</h2>
             <div className="flex gap-2 mb-4">
