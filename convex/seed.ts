@@ -392,20 +392,53 @@ export const copyTemplatesToUser = action({
 
     const ingredients = await ctx.runQuery(internal.seed.listIngredients)
 
-    const findIngredientId = (text: string) => {
-      const normalized = text.toLowerCase().trim()
-      for (const ing of ingredients) {
-        if (ing.normalizedName === normalized) {
-          return ing._id
-        }
-        if (ing.aliases?.some((a) => a.toLowerCase() === normalized)) {
-          return ing._id
-        }
+    const normalizeForMatching = (text: string): Array<string> => {
+      const base = text
+        .toLowerCase()
+        .trim()
+        .replace(/\s*\(optional\)\s*/gi, '')
+        .replace(/\s*\(.*?\)\s*/g, ' ')
+        .replace(/,.*$/, '')
+        .trim()
+
+      const variants = [base]
+
+      if (base.includes(' or ')) {
+        variants.push(...base.split(' or ').map((s) => s.trim()))
       }
-      return undefined
+
+      const words = base.split(/\s+/)
+      if (words.length > 1) {
+        variants.push(words[words.length - 1])
+      }
+
+      return variants.filter((v) => v.length > 0)
     }
 
-    const createdIngredients = new Map<string, Id<'ingredients'>>()
+    const findIngredientId = (text: string) => {
+      const variants = normalizeForMatching(text)
+
+      for (const variant of variants) {
+        for (const ing of ingredients) {
+          if (ing.normalizedName === variant) {
+            return ing._id
+          }
+          if (ing.aliases?.some((a) => a.toLowerCase() === variant)) {
+            return ing._id
+          }
+        }
+      }
+
+      for (const variant of variants) {
+        for (const ing of ingredients) {
+          if (ing.normalizedName.includes(variant) || variant.includes(ing.normalizedName)) {
+            return ing._id
+          }
+        }
+      }
+
+      return undefined
+    }
 
     let copied = 0
     for (const template of templates) {
@@ -417,24 +450,7 @@ export const copyTemplatesToUser = action({
       }> = []
 
       for (const ing of template.parsedIngredients) {
-        let ingredientId: Id<'ingredients'> | undefined = findIngredientId(ing.originalText)
-
-        if (!ingredientId) {
-          const normalized = ing.originalText.toLowerCase().trim()
-          const cached = createdIngredients.get(normalized)
-          if (cached) {
-            ingredientId = cached
-          } else {
-            const newId = await ctx.runMutation(internal.seed.createIngredientFromText, {
-              text: ing.originalText,
-              unit: ing.unit,
-            })
-            if (newId) {
-              createdIngredients.set(normalized, newId)
-              ingredientId = newId
-            }
-          }
-        }
+        const ingredientId = findIngredientId(ing.originalText)
 
         linkedIngredients.push({
           originalText: ing.originalText,
@@ -462,30 +478,3 @@ export const copyTemplatesToUser = action({
   },
 })
 
-export const createIngredientFromText = internalMutation({
-  args: {
-    text: v.string(),
-    unit: v.optional(v.string()),
-  },
-  returns: v.union(v.id('ingredients'), v.null()),
-  handler: async (ctx, args) => {
-    const name = args.text.trim()
-    if (!name) return null
-
-    const normalizedName = name.toLowerCase()
-    const existing = await ctx.db
-      .query('ingredients')
-      .withIndex('by_normalizedName', (q) => q.eq('normalizedName', normalizedName))
-      .first()
-    if (existing) return existing._id
-
-    return await ctx.db.insert('ingredients', {
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      normalizedName,
-      category: 'Other',
-      defaultUnit: args.unit || 'unit',
-      isStaple: false,
-      aliases: [],
-    })
-  },
-})
