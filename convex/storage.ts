@@ -1,5 +1,5 @@
-import { mutation } from "./_generated/server"
-import { v } from "convex/values"
+import { mutation } from './_generated/server'
+import { v } from 'convex/values'
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -10,7 +10,7 @@ export const generateUploadUrl = mutation({
 })
 
 export const getImageUrl = mutation({
-  args: { storageId: v.id("_storage") },
+  args: { storageId: v.id('_storage') },
   returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
     return await ctx.storage.getUrl(args.storageId)

@@ -18,8 +18,12 @@ const getConfig = () => {
   }
   if (typeof process !== 'undefined' && process.env) {
     return {
-      CONVEX_URL: process.env.CONVEX_URL || import.meta.env.VITE_CONVEX_URL || '',
-      CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY || import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '',
+      CONVEX_URL:
+        process.env.CONVEX_URL || import.meta.env.VITE_CONVEX_URL || '',
+      CLERK_PUBLISHABLE_KEY:
+        process.env.CLERK_PUBLISHABLE_KEY ||
+        import.meta.env.VITE_CLERK_PUBLISHABLE_KEY ||
+        '',
     }
   }
   return {
@@ -63,7 +67,10 @@ export function getRouter() {
       defaultNotFoundComponent: () => <p>not found</p>,
       Wrap: ({ children }) => (
         <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
-          <ConvexProviderWithClerk client={convexQueryClient.convexClient} useAuth={useAuth}>
+          <ConvexProviderWithClerk
+            client={convexQueryClient.convexClient}
+            useAuth={useAuth}
+          >
             {children}
           </ConvexProviderWithClerk>
         </ClerkProvider>

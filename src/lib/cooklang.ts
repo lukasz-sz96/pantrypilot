@@ -1,4 +1,4 @@
-import { Parser } from "@cooklang/cooklang"
+import { Parser } from '@cooklang/cooklang'
 import { normalizeUnit } from './units'
 
 export interface ParsedIngredient {
@@ -18,9 +18,10 @@ export interface ParsedRecipe {
 const parser = new Parser()
 
 // Extract quantity value from the parser's structure
-function extractQuantityValue(
-  quantity: unknown
-): { quantity?: number; unit?: string } {
+function extractQuantityValue(quantity: unknown): {
+  quantity?: number
+  unit?: string
+} {
   if (!quantity || typeof quantity !== 'object') return {}
 
   const q = quantity as Record<string, unknown>
@@ -63,16 +64,17 @@ export function parseCooklang(source: string): ParsedRecipe {
   const result = parser.parse(source)
   const recipe = result.recipe
 
-  const title = result.metadata?.title || ""
+  const title = result.metadata?.title || ''
 
   // Extract servings from metadata
   let servings: number | undefined
   if (result.metadata?.servings) {
     // servings might be a number or string depending on the parser version
     const servingsValue = result.metadata.servings
-    const parsed = typeof servingsValue === 'number'
-      ? servingsValue
-      : parseInt(String(servingsValue))
+    const parsed =
+      typeof servingsValue === 'number'
+        ? servingsValue
+        : parseInt(String(servingsValue))
     if (!isNaN(parsed) && parsed > 0) {
       servings = parsed
     }
@@ -86,8 +88,10 @@ export function parseCooklang(source: string): ParsedRecipe {
       if (name.startsWith('/')) {
         name = name.slice(1).trim()
       }
-      const quantity = typeof extracted.quantity === 'number' ? extracted.quantity : undefined
-      const unit = typeof extracted.unit === 'string' ? extracted.unit : undefined
+      const quantity =
+        typeof extracted.quantity === 'number' ? extracted.quantity : undefined
+      const unit =
+        typeof extracted.unit === 'string' ? extracted.unit : undefined
       const normalizedName = name.toLowerCase().trim()
 
       const existing = ingredientMap.get(normalizedName)
@@ -109,22 +113,24 @@ export function parseCooklang(source: string): ParsedRecipe {
     for (const section of recipe.sections) {
       if (section.content) {
         for (const content of section.content) {
-          if (content.type === "step" && content.value?.items) {
+          if (content.type === 'step' && content.value?.items) {
             const stepParts: string[] = []
 
             for (const item of content.value.items) {
-              if (item.type === "text") {
+              if (item.type === 'text') {
                 stepParts.push(item.value)
-              } else if (item.type === "ingredient") {
+              } else if (item.type === 'ingredient') {
                 const ing = recipe.ingredients?.[item.index]
                 if (ing) stepParts.push(ing.name)
-              } else if (item.type === "cookware") {
+              } else if (item.type === 'cookware') {
                 const cw = recipe.cookware?.[item.index]
                 if (cw) stepParts.push(cw.name)
-              } else if (item.type === "timer") {
+              } else if (item.type === 'timer') {
                 const timer = recipe.timers?.[item.index]
                 if (timer?.quantity) {
-                  const { quantity: value, unit } = extractQuantityValue(timer.quantity)
+                  const { quantity: value, unit } = extractQuantityValue(
+                    timer.quantity,
+                  )
                   if (value && unit) {
                     stepParts.push(`${value} ${unit}`)
                   } else if (value) {
@@ -135,7 +141,7 @@ export function parseCooklang(source: string): ParsedRecipe {
               // Skip inlineQuantity items - they're handled elsewhere
             }
 
-            const stepText = stepParts.join("").trim()
+            const stepText = stepParts.join('').trim()
             if (stepText) {
               steps.push(stepText)
             }
@@ -166,7 +172,7 @@ export function parseIngredientLine(text: string): {
   // Pattern: "2 cans of tomatoes", "200g feta cheese", "1/2 cup flour"
   // Match: quantity, optional unit, "of" (optional), ingredient name
   const match = trimmed.match(
-    /^([\d./½¼¾⅓⅔⅛]+)\s*(cans?|cups?|tbsps?|tsps?|teaspoons?|tablespoons?|ounces?|oz|pounds?|lbs?|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|cloves?|packages?|pieces?|slices?|bunch(?:es)?|heads?|stalks?|sprigs?|pinch(?:es)?|large|medium|small)?\s*(?:of\s+)?(.+)$/i
+    /^([\d./½¼¾⅓⅔⅛]+)\s*(cans?|cups?|tbsps?|tsps?|teaspoons?|tablespoons?|ounces?|oz|pounds?|lbs?|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|cloves?|packages?|pieces?|slices?|bunch(?:es)?|heads?|stalks?|sprigs?|pinch(?:es)?|large|medium|small)?\s*(?:of\s+)?(.+)$/i,
   )
 
   if (match) {
@@ -188,8 +194,12 @@ export function parseIngredientLine(text: string): {
     } else {
       // Handle unicode fractions
       const fractionMap: Record<string, number> = {
-        '½': 0.5, '¼': 0.25, '¾': 0.75,
-        '⅓': 1/3, '⅔': 2/3, '⅛': 0.125
+        '½': 0.5,
+        '¼': 0.25,
+        '¾': 0.75,
+        '⅓': 1 / 3,
+        '⅔': 2 / 3,
+        '⅛': 0.125,
       }
       if (fractionMap[quantityStr]) {
         quantity = fractionMap[quantityStr]
@@ -212,7 +222,7 @@ export function parseIngredientLine(text: string): {
 export function generateCooklang(
   title: string,
   _ingredients: { name: string; quantity?: number; unit?: string }[],
-  steps: string[]
+  steps: string[],
 ): string {
   const lines: string[] = []
 
@@ -237,7 +247,7 @@ export function recipeSchemaTooCooklang(schema: RecipeSchema): string {
   const lines: string[] = []
 
   // YAML front matter
-  lines.push("---")
+  lines.push('---')
   lines.push(`title: ${schema.name}`)
   if (schema.recipeYield) {
     lines.push(`servings: ${schema.recipeYield}`)
@@ -248,8 +258,8 @@ export function recipeSchemaTooCooklang(schema: RecipeSchema): string {
   if (schema.cookTime) {
     lines.push(`cook: ${parseDuration(schema.cookTime)}`)
   }
-  lines.push("---")
-  lines.push("")
+  lines.push('---')
+  lines.push('')
 
   // Ingredients as cooklang
   if (schema.recipeIngredient) {
@@ -266,26 +276,26 @@ export function recipeSchemaTooCooklang(schema: RecipeSchema): string {
         lines.push(`@${escapedName}{}`)
       }
     }
-    lines.push("")
+    lines.push('')
   }
 
   // Instructions as steps
   if (schema.recipeInstructions) {
     for (const instruction of schema.recipeInstructions) {
-      if (typeof instruction === "string") {
+      if (typeof instruction === 'string') {
         lines.push(instruction)
       } else if (instruction.text) {
         lines.push(instruction.text)
       }
-      lines.push("")
+      lines.push('')
     }
   }
 
-  return lines.join("\n")
+  return lines.join('\n')
 }
 
 export interface RecipeSchema {
-  "@type"?: string
+  '@type'?: string
   name: string
   recipeIngredient?: string[]
   recipeInstructions?: (string | { text: string })[]
@@ -328,7 +338,7 @@ function parseIngredientText(text: string): {
     .trim()
 
   const match = cleaned.match(
-    /^([\d./½¼¾⅓⅔⅛\s-]+)\s*(cups?|tbsps?|tsps?|teaspoons?|tablespoons?|ounces?|oz|pounds?|lbs?|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|cloves?|cans?|packages?|pieces?|large|medium|small|whole|bunch(?:es)?|heads?|stalks?|sprigs?|pinch(?:es)?)\s+(.+)$/i
+    /^([\d./½¼¾⅓⅔⅛\s-]+)\s*(cups?|tbsps?|tsps?|teaspoons?|tablespoons?|ounces?|oz|pounds?|lbs?|grams?|g|kilograms?|kg|milliliters?|ml|liters?|l|cloves?|cans?|packages?|pieces?|large|medium|small|whole|bunch(?:es)?|heads?|stalks?|sprigs?|pinch(?:es)?)\s+(.+)$/i,
   )
 
   if (match) {
@@ -336,7 +346,9 @@ function parseIngredientText(text: string): {
     const unit = match[2] ? normalizeUnit(match[2]) : undefined
     let name = match[3]?.trim() || ''
 
-    const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i)
+    const altMatch = name.match(
+      /^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i,
+    )
     if (altMatch && altMatch[1]) {
       name = altMatch[1].trim()
     }
@@ -362,7 +374,9 @@ function parseIngredientText(text: string): {
   const simpleMatch = cleaned.match(/^([\d./½¼¾⅓⅔⅛\s-]+)\s+(.+)$/i)
   if (simpleMatch) {
     let name = simpleMatch[2].trim()
-    const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i)
+    const altMatch = name.match(
+      /^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i,
+    )
     if (altMatch && altMatch[1]) {
       name = altMatch[1].trim()
     }
@@ -373,7 +387,9 @@ function parseIngredientText(text: string): {
   }
 
   let name = cleaned.replace(/\s*,\s*$/, '').trim()
-  const altMatch = name.match(/^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i)
+  const altMatch = name.match(
+    /^([^(]+?)(?:\s*\([^)]*(?:or|substitute|such as)[^)]*\))?/i,
+  )
   if (altMatch && altMatch[1]) {
     name = altMatch[1].trim()
   }

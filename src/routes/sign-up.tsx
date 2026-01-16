@@ -5,7 +5,9 @@ const SignUpPage = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-cream px-4">
       <div className="mb-8 text-center">
-        <h1 className="font-display text-4xl text-espresso mb-2">PantryPilot</h1>
+        <h1 className="font-display text-4xl text-espresso mb-2">
+          PantryPilot
+        </h1>
         <p className="text-warmgray">Your kitchen companion</p>
       </div>
       <SignUp
@@ -19,7 +21,8 @@ const SignUpPage = () => {
             headerTitle: 'font-display text-espresso',
             headerSubtitle: 'text-warmgray',
             formButtonPrimary: 'bg-sage hover:bg-sage-dark',
-            formFieldInput: 'rounded-xl border-warmgray/30 focus:border-sage focus:ring-sage',
+            formFieldInput:
+              'rounded-xl border-warmgray/30 focus:border-sage focus:ring-sage',
             footerActionLink: 'text-sage hover:text-sage-dark',
           },
           variables: {

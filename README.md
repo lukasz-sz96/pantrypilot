@@ -5,11 +5,13 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
 ## Features
 
 ### Pantry Management
+
 - Track ingredients in your pantry with quantities and units
 - Smart unit conversion between metric and imperial
 - Categorized ingredient organization
 
 ### Recipe Management
+
 - Import recipes from any URL using AI-powered extraction
 - Write recipes in Cooklang format
 - Scale recipes by adjusting servings
@@ -17,11 +19,13 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
 - Automatic pantry deduction after cooking
 
 ### Shopping Lists
+
 - Create multiple shopping lists
 - Add missing recipe ingredients with one click
 - Check off items as you shop
 
 ### User Accounts
+
 - Secure authentication via Clerk (Google, email, etc.)
 - Private data per user
 - Account management and deletion
@@ -47,20 +51,24 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
 ### Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/pantrypilot.git
    cd pantrypilot
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Configure Convex**
+
    ```bash
    npx convex dev
    ```
+
    This will prompt you to create a new Convex project.
 
 4. **Configure Clerk**
@@ -70,11 +78,13 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
    - Copy the JWT issuer domain
 
 5. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    ```
 
    Fill in your `.env` file:
+
    ```env
    VITE_CONVEX_URL=https://your-deployment.convex.cloud
    VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
@@ -83,6 +93,7 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
    ```
 
 6. **Run development server**
+
    ```bash
    npm run dev
    ```
@@ -111,14 +122,15 @@ docker run -d \
 
 #### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `CONVEX_URL` | Yes | Convex Cloud URL (e.g., `https://your-project.convex.cloud`) |
-| `CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
+| Variable                | Required | Description                                                  |
+| ----------------------- | -------- | ------------------------------------------------------------ |
+| `CONVEX_URL`            | Yes      | Convex Cloud URL (e.g., `https://your-project.convex.cloud`) |
+| `CLERK_PUBLISHABLE_KEY` | Yes      | Clerk publishable key                                        |
 
 #### Unraid
 
 Add container with:
+
 - **Repository**: `ghcr.io/yourusername/pantrypilot:latest`
 - **Port**: 3000 → your choice
 - **Variables**: `CONVEX_URL`, `CLERK_PUBLISHABLE_KEY`

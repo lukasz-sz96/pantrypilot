@@ -38,41 +38,44 @@ const Home = () => {
   }
 
   const pantryIngredientIds = new Set(
-    pantryItems.filter((p) => p.quantity > 0).map((p) => p.ingredientId)
+    pantryItems.filter((p) => p.quantity > 0).map((p) => p.ingredientId),
   )
 
   const stapleIds = new Set(
-    (ingredients || []).filter((i) => i.isStaple).map((i) => i._id)
+    (ingredients || []).filter((i) => i.isStaple).map((i) => i._id),
   )
 
-  const recipesWithAvailability: RecipeWithAvailability[] = recipes.map((recipe) => {
-    const linkedIngredients = recipe.parsedIngredients.filter(
-      (ing) => ing.ingredientId
-    )
+  const recipesWithAvailability: RecipeWithAvailability[] = recipes.map(
+    (recipe) => {
+      const linkedIngredients = recipe.parsedIngredients.filter(
+        (ing) => ing.ingredientId,
+      )
 
-    const nonStapleIngredients = linkedIngredients.filter(
-      (ing) => !stapleIds.has(ing.ingredientId as Id<'ingredients'>)
-    )
+      const nonStapleIngredients = linkedIngredients.filter(
+        (ing) => !stapleIds.has(ing.ingredientId as Id<'ingredients'>),
+      )
 
-    const availableCount = nonStapleIngredients.filter((ing) =>
-      pantryIngredientIds.has(ing.ingredientId as Id<'ingredients'>)
-    ).length
+      const availableCount = nonStapleIngredients.filter((ing) =>
+        pantryIngredientIds.has(ing.ingredientId as Id<'ingredients'>),
+      ).length
 
-    const totalLinked = nonStapleIngredients.length
-    const percentage = totalLinked > 0 ? (availableCount / totalLinked) * 100 : 100
+      const totalLinked = nonStapleIngredients.length
+      const percentage =
+        totalLinked > 0 ? (availableCount / totalLinked) * 100 : 100
 
-    let status: 'ready' | 'almost' | 'far' = 'far'
-    if (percentage === 100) status = 'ready'
-    else if (percentage >= 70) status = 'almost'
+      let status: 'ready' | 'almost' | 'far' = 'far'
+      if (percentage === 100) status = 'ready'
+      else if (percentage >= 70) status = 'almost'
 
-    return {
-      ...recipe,
-      availableCount,
-      totalLinked,
-      percentage,
-      status,
-    }
-  })
+      return {
+        ...recipe,
+        availableCount,
+        totalLinked,
+        percentage,
+        status,
+      }
+    },
+  )
 
   const readyRecipes = recipesWithAvailability
     .filter((r) => r.status === 'ready')

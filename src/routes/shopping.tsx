@@ -16,10 +16,15 @@ const Shopping = () => {
 
   const [showNewList, setShowNewList] = useState(false)
   const [newListName, setNewListName] = useState('')
-  const [expandedList, setExpandedList] = useState<Id<'shoppingLists'> | null>(null)
-  const [addingToList, setAddingToList] = useState<Id<'shoppingLists'> | null>(null)
+  const [expandedList, setExpandedList] = useState<Id<'shoppingLists'> | null>(
+    null,
+  )
+  const [addingToList, setAddingToList] = useState<Id<'shoppingLists'> | null>(
+    null,
+  )
   const [newItemSearch, setNewItemSearch] = useState('')
-  const [newItemIngredient, setNewItemIngredient] = useState<Id<'ingredients'> | null>(null)
+  const [newItemIngredient, setNewItemIngredient] =
+    useState<Id<'ingredients'> | null>(null)
   const [newItemQuantity, setNewItemQuantity] = useState('1')
   const [newItemUnit, setNewItemUnit] = useState('piece')
 
@@ -41,11 +46,13 @@ const Shopping = () => {
 
     await addItems({
       id: addingToList,
-      items: [{
-        ingredientId: newItemIngredient,
-        quantity: qty,
-        unit: newItemUnit,
-      }],
+      items: [
+        {
+          ingredientId: newItemIngredient,
+          quantity: qty,
+          unit: newItemUnit,
+        },
+      ],
     })
 
     // Reset form
@@ -56,10 +63,16 @@ const Shopping = () => {
     setAddingToList(null)
   }
 
-  const filteredIngredients = ingredients?.filter((ing) =>
-    ing.name.toLowerCase().includes(newItemSearch.toLowerCase()) ||
-    ing.aliases?.some((a) => a.toLowerCase().includes(newItemSearch.toLowerCase()))
-  ).slice(0, 8) || []
+  const filteredIngredients =
+    ingredients
+      ?.filter(
+        (ing) =>
+          ing.name.toLowerCase().includes(newItemSearch.toLowerCase()) ||
+          ing.aliases?.some((a) =>
+            a.toLowerCase().includes(newItemSearch.toLowerCase()),
+          ),
+      )
+      .slice(0, 8) || []
 
   if (lists === undefined) {
     return (
@@ -79,10 +92,7 @@ const Shopping = () => {
       <header className="page-header">
         <div className="flex items-center justify-between">
           <h1 className="page-title">Shopping Lists</h1>
-          <button
-            onClick={() => setShowNewList(true)}
-            className="btn-primary"
-          >
+          <button onClick={() => setShowNewList(true)} className="btn-primary">
             + New
           </button>
         </div>
@@ -141,14 +151,18 @@ const Shopping = () => {
                   className="w-full text-left flex items-center justify-between"
                 >
                   <div>
-                    <h3 className="font-display text-lg text-espresso">{list.name}</h3>
+                    <h3 className="font-display text-lg text-espresso">
+                      {list.name}
+                    </h3>
                     <p className="text-sm text-warmgray">
                       {totalCount === 0
                         ? 'Empty'
                         : `${checkedCount}/${totalCount} items checked`}
                     </p>
                   </div>
-                  <span className="text-warmgray">{isExpanded ? '▲' : '▼'}</span>
+                  <span className="text-warmgray">
+                    {isExpanded ? '▲' : '▼'}
+                  </span>
                 </button>
 
                 {isExpanded && (
@@ -165,7 +179,9 @@ const Shopping = () => {
                             className="flex items-center gap-3 p-2 rounded-lg hover:bg-warmgray/5"
                           >
                             <button
-                              onClick={() => toggleItem({ listId: list._id, itemIndex: idx })}
+                              onClick={() =>
+                                toggleItem({ listId: list._id, itemIndex: idx })
+                              }
                               className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
                                 item.checked
                                   ? 'bg-sage border-sage text-white'
@@ -176,13 +192,18 @@ const Shopping = () => {
                             </button>
                             <span
                               className={`flex-1 ${
-                                item.checked ? 'line-through text-warmgray' : 'text-espresso'
+                                item.checked
+                                  ? 'line-through text-warmgray'
+                                  : 'text-espresso'
                               }`}
                             >
-                              {item.quantity} {item.unit} {getIngredientName(item.ingredientId)}
+                              {item.quantity} {item.unit}{' '}
+                              {getIngredientName(item.ingredientId)}
                             </span>
                             <button
-                              onClick={() => removeItem({ listId: list._id, itemIndex: idx })}
+                              onClick={() =>
+                                removeItem({ listId: list._id, itemIndex: idx })
+                              }
                               className="text-warmgray hover:text-terracotta"
                             >
                               ×
@@ -257,8 +278,12 @@ const Shopping = () => {
                       }}
                       className="w-full text-left p-3 rounded-xl hover:bg-sage/10 transition-colors"
                     >
-                      <span className="font-medium text-espresso">{ing.name}</span>
-                      <span className="text-sm text-warmgray ml-2">{ing.category}</span>
+                      <span className="font-medium text-espresso">
+                        {ing.name}
+                      </span>
+                      <span className="text-sm text-warmgray ml-2">
+                        {ing.category}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -279,7 +304,9 @@ const Shopping = () => {
 
                 <div className="flex gap-3 mb-4">
                   <div className="flex-1">
-                    <label className="block text-sm text-warmgray mb-1">Quantity</label>
+                    <label className="block text-sm text-warmgray mb-1">
+                      Quantity
+                    </label>
                     <input
                       type="number"
                       value={newItemQuantity}
@@ -290,7 +317,9 @@ const Shopping = () => {
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm text-warmgray mb-1">Unit</label>
+                    <label className="block text-sm text-warmgray mb-1">
+                      Unit
+                    </label>
                     <UnitPicker
                       value={newItemUnit}
                       onChange={setNewItemUnit}
@@ -299,10 +328,7 @@ const Shopping = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleAddItem}
-                  className="w-full btn-primary"
-                >
+                <button onClick={handleAddItem} className="w-full btn-primary">
                   Add to List
                 </button>
               </>

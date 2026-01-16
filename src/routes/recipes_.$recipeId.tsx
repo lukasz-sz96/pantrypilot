@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useState, useEffect, useRef } from 'react'
@@ -17,6 +17,8 @@ const RecipeDetail = () => {
   const updateRecipe = useMutation(api.recipes.update)
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl)
   const getImageUrl = useMutation(api.storage.getImageUrl)
+  const generateTagsForRecipe = useAction(api.recipes.generateTagsForRecipe)
+  const createCategory = useMutation(api.recipes.createCategory)
   const [currentStep, setCurrentStep] = useState(0)
   const [showCookMode, setShowCookMode] = useState(false)
   const [showMarkCooked, setShowMarkCooked] = useState(false)
@@ -29,6 +31,7 @@ const RecipeDetail = () => {
   const [uploadPreview, setUploadPreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentServings, setCurrentServings] = useState<number | null>(null)
+  const [generatingTags, setGeneratingTags] = useState(false)
 
   useEffect(() => {
     if (recipe && currentServings === null) {
@@ -81,12 +84,16 @@ const RecipeDetail = () => {
 
   const ingredientsWithStatus = recipe.parsedIngredients.map((ing) => ({
     ...ing,
-    status: getIngredientStatus(ing.ingredientId as Id<'ingredients'> | undefined),
-    linkedName: getIngredientName(ing.ingredientId as Id<'ingredients'> | undefined),
+    status: getIngredientStatus(
+      ing.ingredientId as Id<'ingredients'> | undefined,
+    ),
+    linkedName: getIngredientName(
+      ing.ingredientId as Id<'ingredients'> | undefined,
+    ),
   }))
 
   const availableCount = ingredientsWithStatus.filter(
-    (i) => i.status === 'available'
+    (i) => i.status === 'available',
   ).length
   const totalLinked = ingredientsWithStatus.filter((i) => i.ingredientId).length
 
@@ -96,7 +103,7 @@ const RecipeDetail = () => {
 
   if (showAddToList && pantryItems) {
     const missingIngredients = ingredientsWithStatus.filter(
-      (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty')
+      (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty'),
     )
     return (
       <AddToShoppingListModal
@@ -154,10 +161,7 @@ const RecipeDetail = () => {
 
       <div className="recipe-hero">
         {recipe.image ? (
-          <img
-            src={recipe.image}
-            alt=""
-          />
+          <img src={recipe.image} alt="" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-warmgray">
             No image
@@ -188,12 +192,61 @@ const RecipeDetail = () => {
           </a>
         )}
 
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {recipe.category && (
+            <span className="px-3 py-1 rounded-full bg-sage/20 text-sage-dark text-sm font-medium">
+              {recipe.category}
+            </span>
+          )}
+          {recipe.tags &&
+            recipe.tags.map((tag) => (
+              <span
+                key={tag}
+                className="px-3 py-1 rounded-full bg-warmgray/10 text-warmgray text-sm"
+              >
+                {tag}
+              </span>
+            ))}
+          {(!recipe.tags || recipe.tags.length === 0) && (
+            <button
+              onClick={async () => {
+                setGeneratingTags(true)
+                try {
+                  const result = await generateTagsForRecipe({
+                    recipeId: recipe._id,
+                  })
+                  if (result.category && result.isNewCategory) {
+                    await createCategory({ name: result.category })
+                  }
+                  await updateRecipe({
+                    id: recipe._id,
+                    category: result.category,
+                    tags: result.tags,
+                  })
+                } catch (e) {
+                  console.error('Failed to generate tags:', e)
+                } finally {
+                  setGeneratingTags(false)
+                }
+              }}
+              disabled={generatingTags}
+              className="px-3 py-1 rounded-full border border-dashed border-sage/50 text-sage text-sm hover:bg-sage/10 transition-colors disabled:opacity-50"
+            >
+              {generatingTags ? 'Generating...' : '✨ Generate tags'}
+            </button>
+          )}
+        </div>
+
         <div className="recipe-detail-layout">
           <div className="recipe-detail-sidebar space-y-4">
             <div className="servings-control">
               <span>Servings:</span>
               <button
-                onClick={() => setCurrentServings(Math.max(1, (currentServings || baseServings) - 1))}
+                onClick={() =>
+                  setCurrentServings(
+                    Math.max(1, (currentServings || baseServings) - 1),
+                  )
+                }
                 disabled={currentServings === 1}
                 className="servings-btn"
                 aria-label="Decrease servings"
@@ -203,7 +256,9 @@ const RecipeDetail = () => {
               </button>
               <span className="servings-value">{currentServings}</span>
               <button
-                onClick={() => setCurrentServings((currentServings || baseServings) + 1)}
+                onClick={() =>
+                  setCurrentServings((currentServings || baseServings) + 1)
+                }
                 className="servings-btn"
                 aria-label="Increase servings"
                 title="Increase servings"
@@ -215,7 +270,9 @@ const RecipeDetail = () => {
             {totalLinked > 0 && (
               <div className="bg-cream rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-espresso">Ingredient Check</span>
+                  <span className="font-medium text-espresso">
+                    Ingredient Check
+                  </span>
                   <span
                     className={`text-sm font-medium ${
                       availableCount === totalLinked
@@ -237,18 +294,26 @@ const RecipeDetail = () => {
                           ? 'bg-yellow-500'
                           : 'bg-terracotta'
                     }`}
-                    style={{ width: `${(availableCount / totalLinked) * 100}%` }}
+                    style={{
+                      width: `${(availableCount / totalLinked) * 100}%`,
+                    }}
                   />
                 </div>
               </div>
             )}
 
             <section>
-              <h2 className="text-lg font-display text-espresso mb-3">Ingredients</h2>
+              <h2 className="text-lg font-display text-espresso mb-3">
+                Ingredients
+              </h2>
               <div className="space-y-2">
                 {ingredientsWithStatus.map((ing, idx) => {
-                  const scaledQuantity = ing.quantity ? ing.quantity * scaleFactor : undefined
-                  const displayQuantity = scaledQuantity ? formatQuantity(scaledQuantity) : ''
+                  const scaledQuantity = ing.quantity
+                    ? ing.quantity * scaleFactor
+                    : undefined
+                  const displayQuantity = scaledQuantity
+                    ? formatQuantity(scaledQuantity)
+                    : ''
                   return (
                     <div
                       key={idx}
@@ -263,7 +328,11 @@ const RecipeDetail = () => {
                               : 'bg-warmgray/20 text-warmgray'
                         }`}
                       >
-                        {ing.status === 'available' ? '✓' : ing.status === 'unknown' ? '?' : '✕'}
+                        {ing.status === 'available'
+                          ? '✓'
+                          : ing.status === 'unknown'
+                            ? '?'
+                            : '✕'}
                       </div>
                       <div className="flex-1">
                         <span className="text-espresso">
@@ -271,11 +340,12 @@ const RecipeDetail = () => {
                           {ing.unit && `${ing.unit} `}
                           {ing.linkedName || ing.originalText}
                         </span>
-                        {ing.linkedName && ing.linkedName !== ing.originalText && (
-                          <span className="text-xs text-warmgray ml-2">
-                            ({ing.originalText})
-                          </span>
-                        )}
+                        {ing.linkedName &&
+                          ing.linkedName !== ing.originalText && (
+                            <span className="text-xs text-warmgray ml-2">
+                              ({ing.originalText})
+                            </span>
+                          )}
                       </div>
                     </div>
                   )
@@ -284,7 +354,9 @@ const RecipeDetail = () => {
             </section>
 
             {ingredientsWithStatus.some(
-              (i) => i.ingredientId && (i.status === 'missing' || i.status === 'empty')
+              (i) =>
+                i.ingredientId &&
+                (i.status === 'missing' || i.status === 'empty'),
             ) && (
               <button
                 onClick={() => setShowAddToList(true)}
@@ -298,14 +370,21 @@ const RecipeDetail = () => {
 
           <div className="recipe-detail-main space-y-6">
             <section>
-              <h2 className="text-lg font-display text-espresso mb-3">Instructions</h2>
+              <h2 className="text-lg font-display text-espresso mb-3">
+                Instructions
+              </h2>
               <div className="space-y-3">
                 {recipe.parsedSteps.map((step, idx) => (
-                  <div key={idx} className="flex gap-3 p-3 lg:p-4 bg-cream rounded-xl">
+                  <div
+                    key={idx}
+                    className="flex gap-3 p-3 lg:p-4 bg-cream rounded-xl"
+                  >
                     <div className="w-8 h-8 rounded-full bg-sage/20 text-sage flex items-center justify-center font-medium shrink-0">
                       {idx + 1}
                     </div>
-                    <p className="text-espresso flex-1 leading-relaxed">{step}</p>
+                    <p className="text-espresso flex-1 leading-relaxed">
+                      {step}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -339,9 +418,12 @@ const RecipeDetail = () => {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-cream rounded-2xl p-6 max-w-sm w-full">
-            <h2 className="font-display text-xl text-espresso mb-2">Delete Recipe?</h2>
+            <h2 className="font-display text-xl text-espresso mb-2">
+              Delete Recipe?
+            </h2>
             <p className="text-warmgray mb-6">
-              Are you sure you want to delete "{recipe.title}"? This cannot be undone.
+              Are you sure you want to delete "{recipe.title}"? This cannot be
+              undone.
             </p>
             <div className="flex gap-3">
               <button
@@ -367,7 +449,9 @@ const RecipeDetail = () => {
       {showEditImage && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-cream rounded-2xl p-6 max-w-md w-full">
-            <h2 className="font-display text-xl text-espresso mb-4">Recipe Image</h2>
+            <h2 className="font-display text-xl text-espresso mb-4">
+              Recipe Image
+            </h2>
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setImageMode('url')}
@@ -408,7 +492,7 @@ const RecipeDetail = () => {
                       alt="Preview"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none'
+                        ;(e.target as HTMLImageElement).style.display = 'none'
                       }}
                     />
                   </div>
@@ -425,7 +509,8 @@ const RecipeDetail = () => {
                     const file = e.target.files?.[0]
                     if (file) {
                       const reader = new FileReader()
-                      reader.onload = () => setUploadPreview(reader.result as string)
+                      reader.onload = () =>
+                        setUploadPreview(reader.result as string)
                       reader.readAsDataURL(file)
                     }
                   }}
@@ -434,7 +519,9 @@ const RecipeDetail = () => {
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full py-8 rounded-xl border-2 border-dashed border-warmgray/30 text-warmgray hover:border-sage hover:text-sage transition-colors mb-4"
                 >
-                  {uploadPreview ? 'Choose different file' : 'Click to select image'}
+                  {uploadPreview
+                    ? 'Choose different file'
+                    : 'Click to select image'}
                 </button>
                 {uploadPreview && (
                   <div className="mb-4 rounded-xl overflow-hidden bg-warmgray/10 h-40">
@@ -516,7 +603,11 @@ const CookModeView = ({
   recipe: {
     title: string
     parsedSteps: string[]
-    parsedIngredients: { originalText: string; quantity?: number; unit?: string }[]
+    parsedIngredients: {
+      originalText: string
+      quantity?: number
+      unit?: string
+    }[]
   }
   currentStep: number
   setCurrentStep: (step: number) => void
@@ -546,7 +637,9 @@ const CookModeView = ({
           <div className="text-6xl font-display text-sage mb-6">
             {currentStep + 1}
           </div>
-          <p className="text-xl leading-relaxed">{recipe.parsedSteps[currentStep]}</p>
+          <p className="text-xl leading-relaxed">
+            {recipe.parsedSteps[currentStep]}
+          </p>
         </div>
       </div>
 
@@ -584,7 +677,9 @@ const CookModeView = ({
             </button>
           ) : (
             <button
-              onClick={() => setCurrentStep(Math.min(totalSteps - 1, currentStep + 1))}
+              onClick={() =>
+                setCurrentStep(Math.min(totalSteps - 1, currentStep + 1))
+              }
               className="flex-1 py-4 rounded-xl bg-sage text-espresso font-medium hover:bg-sage/90 transition-colors"
             >
               Next
@@ -627,7 +722,9 @@ const AddToShoppingListModal = ({
   const addItems = useMutation(api.shoppingLists.addItems)
   const allIngredients = useQuery(api.ingredients.list)
 
-  const [selectedListId, setSelectedListId] = useState<Id<'shoppingLists'> | 'new' | null>(null)
+  const [selectedListId, setSelectedListId] = useState<
+    Id<'shoppingLists'> | 'new' | null
+  >(null)
   const [newListName, setNewListName] = useState('')
   const [selectedItems, setSelectedItems] = useState<Set<string>>(() => {
     return new Set(missingIngredients.map((_, idx) => String(idx)))
@@ -716,7 +813,9 @@ const AddToShoppingListModal = ({
 
       <div className="flex-1 px-4 py-4 space-y-6">
         <section>
-          <h2 className="text-lg font-display text-espresso mb-3">Select List</h2>
+          <h2 className="text-lg font-display text-espresso mb-3">
+            Select List
+          </h2>
           <div className="space-y-2">
             {lists.map((list) => (
               <button
@@ -742,7 +841,9 @@ const AddToShoppingListModal = ({
                   : 'border-warmgray/30 bg-white hover:border-sage/50'
               }`}
             >
-              <span className="font-medium text-espresso">+ Create New List</span>
+              <span className="font-medium text-espresso">
+                + Create New List
+              </span>
             </button>
           </div>
           {selectedListId === 'new' && (
@@ -784,7 +885,8 @@ const AddToShoppingListModal = ({
                 <span className="text-espresso text-left flex-1">
                   {ing.quantity && `${ing.quantity} `}
                   {ing.unit && `${ing.unit} `}
-                  {getIngredientName(ing.ingredientId as Id<'ingredients'>) || ing.originalText}
+                  {getIngredientName(ing.ingredientId as Id<'ingredients'>) ||
+                    ing.originalText}
                 </span>
               </button>
             ))}
@@ -817,7 +919,7 @@ function calculateDeduction(
   recipeQty: number,
   recipeUnit: string,
   pantryQty: number,
-  pantryUnit: string
+  pantryUnit: string,
 ): { deductQty: number; note?: string } {
   // Handle empty/missing units - treat as unitless quantities
   if (!recipeUnit.trim() || !pantryUnit.trim()) {
@@ -842,7 +944,7 @@ function calculateDeduction(
       const deductQty = Math.min(convertedRecipeQty, pantryQty)
       return {
         deductQty: Math.round(deductQty * 100) / 100, // Round to 2 decimal places
-        note: `Recipe needs ${formatQuantity(recipeQty)} ${recipeUnit} (≈ ${formatQuantity(convertedRecipeQty)} ${pantryUnit})`
+        note: `Recipe needs ${formatQuantity(recipeQty)} ${recipeUnit} (≈ ${formatQuantity(convertedRecipeQty)} ${pantryUnit})`,
       }
     }
   }
@@ -850,7 +952,7 @@ function calculateDeduction(
   // Can't convert - show warning
   return {
     deductQty: 0,
-    note: `Unit mismatch: recipe uses ${recipeUnit}, pantry has ${pantryUnit}`
+    note: `Unit mismatch: recipe uses ${recipeUnit}, pantry has ${pantryUnit}`,
   }
 }
 
@@ -880,7 +982,9 @@ const MarkAsCookedModal = ({
   const deductibleIngredients = recipe.parsedIngredients
     .filter((ing) => ing.ingredientId)
     .map((ing) => {
-      const pantryItem = pantryItems.find((p) => p.ingredientId === ing.ingredientId)
+      const pantryItem = pantryItems.find(
+        (p) => p.ingredientId === ing.ingredientId,
+      )
       return {
         ...ing,
         pantryItem,
@@ -897,7 +1001,7 @@ const MarkAsCookedModal = ({
           ing.quantity || 1,
           ing.unit || '',
           ing.pantryItem.quantity,
-          ing.pantryItem.unit
+          ing.pantryItem.unit,
         )
         initial[ing.pantryItem._id] = result.deductQty
       }
@@ -913,7 +1017,7 @@ const MarkAsCookedModal = ({
           ing.quantity || 1,
           ing.unit || '',
           ing.pantryItem.quantity,
-          ing.pantryItem.unit
+          ing.pantryItem.unit,
         )
         if (result.note) {
           initialNotes[ing.pantryItem._id] = result.note
@@ -997,7 +1101,10 @@ const MarkAsCookedModal = ({
                     onClick={() =>
                       setDeductions((d) => ({
                         ...d,
-                        [ing.pantryItem!._id]: Math.max(0, currentDeduction - 0.5),
+                        [ing.pantryItem!._id]: Math.max(
+                          0,
+                          currentDeduction - 0.5,
+                        ),
                       }))
                     }
                     className="w-10 h-10 rounded-full bg-warmgray/10 flex items-center justify-center text-espresso hover:bg-warmgray/20"
@@ -1008,7 +1115,9 @@ const MarkAsCookedModal = ({
                     <span className="text-2xl font-medium text-espresso">
                       {formatQuantity(currentDeduction)}
                     </span>
-                    <span className="text-warmgray ml-1">{ing.pantryItem.unit}</span>
+                    <span className="text-warmgray ml-1">
+                      {ing.pantryItem.unit}
+                    </span>
                   </div>
                   <button
                     onClick={() =>
@@ -1023,7 +1132,9 @@ const MarkAsCookedModal = ({
                   </button>
                 </div>
                 {deductionNotes[ing.pantryItem._id] && (
-                  <span className="deduction-note">{deductionNotes[ing.pantryItem._id]}</span>
+                  <span className="deduction-note">
+                    {deductionNotes[ing.pantryItem._id]}
+                  </span>
                 )}
               </div>
             )

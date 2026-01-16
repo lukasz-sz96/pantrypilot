@@ -26,7 +26,11 @@ const RootDocument = ({ children }: { children: React.ReactNode }) => {
   return (
     <html>
       <head>
-        {config && <script dangerouslySetInnerHTML={{ __html: `window.__CONFIG__=${config}` }} />}
+        {config && (
+          <script
+            dangerouslySetInnerHTML={{ __html: `window.__CONFIG__=${config}` }}
+          />
+        )}
         <HeadContent />
       </head>
       <body>
@@ -43,7 +47,9 @@ const RootComponent = () => {
   const { isSignedIn, isLoaded } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const isAuthRoute = AUTH_ROUTES.some(route => location.pathname.startsWith(route))
+  const isAuthRoute = AUTH_ROUTES.some((route) =>
+    location.pathname.startsWith(route),
+  )
 
   useEffect(() => {
     if (!isLoaded) return

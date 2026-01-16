@@ -221,7 +221,7 @@ export function canConvert(fromUnit: string, toUnit: string): boolean {
 export function convertUnit(
   value: number,
   fromUnit: string,
-  toUnit: string
+  toUnit: string,
 ): number | null {
   const normalizedFrom = normalizeUnit(fromUnit)
   const normalizedTo = normalizeUnit(toUnit)

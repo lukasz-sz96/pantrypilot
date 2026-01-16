@@ -1,15 +1,16 @@
-import { query, mutation, action } from "./_generated/server"
-import { v } from "convex/values"
+import { v } from 'convex/values'
+import { internal } from './_generated/api'
+import { action, internalQuery, mutation, query } from './_generated/server'
 
 const parsedIngredientValidator = v.object({
   originalText: v.string(),
   quantity: v.optional(v.number()),
   unit: v.optional(v.string()),
-  ingredientId: v.optional(v.id("ingredients")),
+  ingredientId: v.optional(v.id('ingredients')),
 })
 
 const recipeValidator = v.object({
-  _id: v.id("recipes"),
+  _id: v.id('recipes'),
   _creationTime: v.number(),
   userId: v.string(),
   title: v.string(),
@@ -19,6 +20,8 @@ const recipeValidator = v.object({
   parsedSteps: v.array(v.string()),
   servings: v.optional(v.number()),
   image: v.optional(v.string()),
+  category: v.optional(v.string()),
+  tags: v.optional(v.array(v.string())),
 })
 
 export const list = query({
@@ -28,14 +31,14 @@ export const list = query({
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) return []
     return await ctx.db
-      .query("recipes")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .query('recipes')
+      .withIndex('by_user', (q) => q.eq('userId', identity.subject))
       .collect()
   },
 })
 
 export const get = query({
-  args: { id: v.id("recipes") },
+  args: { id: v.id('recipes') },
   returns: v.union(recipeValidator, v.null()),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -55,12 +58,14 @@ export const save = mutation({
     parsedSteps: v.array(v.string()),
     servings: v.optional(v.number()),
     image: v.optional(v.string()),
+    category: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
   },
-  returns: v.id("recipes"),
+  returns: v.id('recipes'),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
-    return await ctx.db.insert("recipes", {
+    if (!identity) throw new Error('Not authenticated')
+    return await ctx.db.insert('recipes', {
       userId: identity.subject,
       title: args.title,
       source: args.source,
@@ -69,37 +74,46 @@ export const save = mutation({
       parsedSteps: args.parsedSteps,
       servings: args.servings,
       image: args.image,
+      category: args.category,
+      tags: args.tags,
     })
   },
 })
 
 export const update = mutation({
   args: {
-    id: v.id("recipes"),
+    id: v.id('recipes'),
     title: v.optional(v.string()),
     cooklangSource: v.optional(v.string()),
     parsedIngredients: v.optional(v.array(parsedIngredientValidator)),
     parsedSteps: v.optional(v.array(v.string())),
     servings: v.optional(v.number()),
     image: v.optional(v.string()),
+    category: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
+    if (!identity) throw new Error('Not authenticated')
     const existing = await ctx.db.get(args.id)
     if (!existing) {
-      throw new Error("Recipe not found")
+      throw new Error('Recipe not found')
     }
-    if (existing.userId !== identity.subject) throw new Error("Not authorized")
+    if (existing.userId !== identity.subject) throw new Error('Not authorized')
     const { id, ...updates } = args
     const patch: Record<string, unknown> = {}
     if (updates.title !== undefined) patch.title = updates.title
-    if (updates.cooklangSource !== undefined) patch.cooklangSource = updates.cooklangSource
-    if (updates.parsedIngredients !== undefined) patch.parsedIngredients = updates.parsedIngredients
-    if (updates.parsedSteps !== undefined) patch.parsedSteps = updates.parsedSteps
+    if (updates.cooklangSource !== undefined)
+      patch.cooklangSource = updates.cooklangSource
+    if (updates.parsedIngredients !== undefined)
+      patch.parsedIngredients = updates.parsedIngredients
+    if (updates.parsedSteps !== undefined)
+      patch.parsedSteps = updates.parsedSteps
     if (updates.servings !== undefined) patch.servings = updates.servings
     if (updates.image !== undefined) patch.image = updates.image
+    if (updates.category !== undefined) patch.category = updates.category
+    if (updates.tags !== undefined) patch.tags = updates.tags
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(id, patch)
     }
@@ -108,31 +122,31 @@ export const update = mutation({
 })
 
 export const remove = mutation({
-  args: { id: v.id("recipes") },
+  args: { id: v.id('recipes') },
   returns: v.null(),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
+    if (!identity) throw new Error('Not authenticated')
     const existing = await ctx.db.get(args.id)
     if (!existing) {
-      throw new Error("Recipe not found")
+      throw new Error('Recipe not found')
     }
-    if (existing.userId !== identity.subject) throw new Error("Not authorized")
+    if (existing.userId !== identity.subject) throw new Error('Not authorized')
     await ctx.db.delete(args.id)
     return null
   },
 })
 
 interface RecipeSchema {
-  "@type"?: string
+  '@type'?: string
   name: string
-  recipeIngredient?: string[]
-  recipeInstructions?: (string | { text: string; "@type"?: string })[]
+  recipeIngredient?: Array<string>
+  recipeInstructions?: Array<string | { text: string; '@type'?: string }>
   recipeYield?: string | number
   prepTime?: string
   cookTime?: string
   totalTime?: string
-  image?: string | string[]
+  image?: string | Array<string>
   description?: string
 }
 
@@ -154,21 +168,21 @@ function parseIngredientText(text: string): {
   unit?: string
 } {
   const match = text.match(
-    /^([\d./\s]+)?\s*(cups?|tbsp?|tsp|teaspoons?|tablespoons?|oz|ounces?|lbs?|pounds?|g|grams?|kg|ml|liters?|cloves?|cans?|packages?|pieces?)?\s*(.+)$/i
+    /^([\d./\s]+)?\s*(cups?|tbsp?|tsp|teaspoons?|tablespoons?|oz|ounces?|lbs?|pounds?|g|grams?|kg|ml|liters?|cloves?|cans?|packages?|pieces?)?\s*(.+)$/i,
   )
   if (match) {
-    const quantity = match[1]?.trim()
-    const unit = match[2]?.toLowerCase()
-    const name = match[3]?.trim()
+    const quantity = match[1] ? match[1].trim() : undefined
+    const unit = match[2] ? match[2].toLowerCase() : undefined
+    const name = match[3] ? match[3].trim() : undefined
     if (name) return { name, quantity, unit }
   }
   return { name: text }
 }
 
 function recipeSchemaTooCooklang(schema: RecipeSchema): string {
-  const lines: string[] = []
+  const lines: Array<string> = []
 
-  lines.push("---")
+  lines.push('---')
   lines.push(`title: ${schema.name}`)
   if (schema.recipeYield) {
     lines.push(`servings: ${schema.recipeYield}`)
@@ -179,8 +193,8 @@ function recipeSchemaTooCooklang(schema: RecipeSchema): string {
   if (schema.cookTime) {
     lines.push(`cook: ${parseDuration(schema.cookTime)}`)
   }
-  lines.push("---")
-  lines.push("")
+  lines.push('---')
+  lines.push('')
 
   if (schema.recipeIngredient) {
     for (const ing of schema.recipeIngredient) {
@@ -193,27 +207,27 @@ function recipeSchemaTooCooklang(schema: RecipeSchema): string {
         lines.push(`@${parsed.name}{}`)
       }
     }
-    lines.push("")
+    lines.push('')
   }
 
   if (schema.recipeInstructions) {
     for (const instruction of schema.recipeInstructions) {
-      if (typeof instruction === "string") {
+      if (typeof instruction === 'string') {
         lines.push(instruction)
       } else if (instruction.text) {
         lines.push(instruction.text)
       }
-      lines.push("")
+      lines.push('')
     }
   }
 
-  return lines.join("\n")
+  return lines.join('\n')
 }
 
 function extractJsonLdRecipe(html: string): RecipeSchema | null {
   // Find all JSON-LD scripts
   const jsonLdMatches = html.matchAll(
-    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
   )
 
   for (const match of jsonLdMatches) {
@@ -221,24 +235,24 @@ function extractJsonLdRecipe(html: string): RecipeSchema | null {
       const json = JSON.parse(match[1])
 
       // Handle @graph arrays
-      if (json["@graph"]) {
-        for (const item of json["@graph"]) {
-          const types = Array.isArray(item["@type"])
-            ? item["@type"]
-            : [item["@type"]]
-          if (types.includes("Recipe")) {
+      if (json['@graph']) {
+        for (const item of json['@graph']) {
+          const types = Array.isArray(item['@type'])
+            ? item['@type']
+            : [item['@type']]
+          if (types.includes('Recipe')) {
             return item as RecipeSchema
           }
         }
       }
 
       // Handle direct Recipe type
-      if (json["@type"] === "Recipe") {
+      if (json['@type'] === 'Recipe') {
         return json as RecipeSchema
       }
 
       // Handle array of types
-      if (Array.isArray(json["@type"]) && json["@type"].includes("Recipe")) {
+      if (Array.isArray(json['@type']) && json['@type'].includes('Recipe')) {
         return json as RecipeSchema
       }
 
@@ -246,8 +260,8 @@ function extractJsonLdRecipe(html: string): RecipeSchema | null {
       if (Array.isArray(json)) {
         for (const item of json) {
           if (
-            item["@type"] === "Recipe" ||
-            (Array.isArray(item["@type"]) && item["@type"].includes("Recipe"))
+            item['@type'] === 'Recipe' ||
+            (Array.isArray(item['@type']) && item['@type'].includes('Recipe'))
           ) {
             return item as RecipeSchema
           }
@@ -288,6 +302,41 @@ Heat @olive oil{2%tbsp} in a #pan.
 Recipe to convert:
 `
 
+const DEFAULT_CATEGORIES = [
+  'Asian',
+  'Breads',
+  'Breakfast',
+  'Desserts',
+  'Italian',
+  'Lunches',
+  'Main',
+  'Mexican',
+  'Sides',
+  'Soups & Stews',
+  'Vegetarian',
+]
+
+const TAGGING_PROMPT = `Analyze this recipe and return JSON only.
+
+Existing categories: {categories}
+
+Rules:
+- Pick the best category from existing, OR suggest a new one if none fit
+- Add relevant dietary tags based on ingredients
+- Add cuisine tag if the recipe has a clear cuisine origin
+- Only include tags you're confident about
+
+Return format (JSON only, no markdown):
+{"category": "category name", "isNewCategory": false, "tags": ["tag1", "tag2"]}
+
+Dietary tags to consider: vegetarian, vegan, gluten-free, dairy-free, keto, low-carb, nut-free
+Cuisine tags to consider: Italian, Mexican, Asian, French, Mediterranean, American, Indian, Japanese, Greek, Thai
+
+Recipe title: {title}
+Ingredients:
+{ingredients}
+`
+
 function stripMarkdownCodeBlocks(text: string): string {
   let result = text.trim()
   result = result.replace(/^```\w*\n?/, '')
@@ -297,18 +346,20 @@ function stripMarkdownCodeBlocks(text: string): string {
 
 function extractImageFromHtml(html: string): string | undefined {
   const jsonLdMatches = html.matchAll(
-    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
   )
 
   for (const match of jsonLdMatches) {
     try {
       const json = JSON.parse(match[1])
-      const items = json["@graph"] || (Array.isArray(json) ? json : [json])
+      const items = json['@graph'] || (Array.isArray(json) ? json : [json])
       for (const item of items) {
-        const types = Array.isArray(item["@type"]) ? item["@type"] : [item["@type"]]
-        if (types.includes("Recipe") && item.image) {
+        const types = Array.isArray(item['@type'])
+          ? item['@type']
+          : [item['@type']]
+        if (types.includes('Recipe') && item.image) {
           const img = Array.isArray(item.image) ? item.image[0] : item.image
-          if (typeof img === "string") return img
+          if (typeof img === 'string') return img
           if (img?.url) return img.url
           if (img?.contentUrl) return img.contentUrl
         }
@@ -318,20 +369,87 @@ function extractImageFromHtml(html: string): string | undefined {
     }
   }
 
-  const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
-    || html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i)
+  const ogMatch =
+    html.match(
+      /<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i,
+    ) ||
+    html.match(
+      /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["']/i,
+    )
   if (ogMatch) return ogMatch[1]
 
   return undefined
 }
 
 function extractTitleFromCooklang(cooklang: string): string | undefined {
-  for (const line of cooklang.split("\n")) {
-    if (line.toLowerCase().startsWith("title:")) {
-      return line.substring(line.indexOf(":") + 1).trim()
+  for (const line of cooklang.split('\n')) {
+    if (line.toLowerCase().startsWith('title:')) {
+      return line.substring(line.indexOf(':') + 1).trim()
     }
   }
   return undefined
+}
+
+async function generateTags(
+  openrouterKey: string,
+  title: string,
+  ingredients: Array<string>,
+  existingCategories: Array<string>,
+): Promise<{
+  category?: string
+  isNewCategory?: boolean
+  tags?: Array<string>
+}> {
+  const categories =
+    existingCategories.length > 0 ? existingCategories : DEFAULT_CATEGORIES
+  const prompt = TAGGING_PROMPT.replace('{categories}', categories.join(', '))
+    .replace('{title}', title)
+    .replace('{ingredients}', ingredients.join('\n'))
+
+  try {
+    const response = await fetch(
+      'https://openrouter.ai/api/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${openrouterKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 500,
+        }),
+      },
+    )
+
+    if (response.ok) {
+      const data = await response.json()
+      const content = data.choices?.[0]?.message?.content
+      if (content) {
+        const cleaned = content.replace(/```json\n?|\n?```/g, '').trim()
+        const parsed = JSON.parse(cleaned)
+        return {
+          category: parsed.category,
+          isNewCategory: parsed.isNewCategory,
+          tags: parsed.tags,
+        }
+      }
+    }
+  } catch {
+    // Tagging failed, return empty
+  }
+  return {}
+}
+
+function extractIngredientsFromCooklang(cooklang: string): Array<string> {
+  const ingredients: Array<string> = []
+  const regex = /@([^{@]+)\{([^}]*)\}/g
+  let match
+  while ((match = regex.exec(cooklang)) !== null) {
+    ingredients.push(match[1].trim())
+  }
+  return ingredients
 }
 
 export const importFromUrl = action({
@@ -341,25 +459,28 @@ export const importFromUrl = action({
     title: v.string(),
     servings: v.optional(v.number()),
     image: v.optional(v.string()),
+    suggestedCategory: v.optional(v.string()),
+    isNewCategory: v.optional(v.boolean()),
+    suggestedTags: v.optional(v.array(v.string())),
   }),
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
     let parsedUrl: URL
     try {
       parsedUrl = new URL(args.url)
     } catch {
-      throw new Error("Invalid URL provided")
+      throw new Error('Invalid URL provided')
     }
 
-    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      throw new Error("URL must use http or https protocol")
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      throw new Error('URL must use http or https protocol')
     }
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30000)
     const response = await fetch(args.url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; PantryPilot/1.0)",
-        Accept: "text/html",
+        'User-Agent': 'Mozilla/5.0 (compatible; PantryPilot/1.0)',
+        Accept: 'text/html',
       },
       signal: controller.signal,
     })
@@ -375,28 +496,60 @@ export const importFromUrl = action({
     const openrouterKey = process.env.OPENROUTER_API_KEY
     if (openrouterKey) {
       try {
-        const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${openrouterKey}`,
-            "Content-Type": "application/json",
+        const aiResponse = await fetch(
+          'https://openrouter.ai/api/v1/chat/completions',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${openrouterKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model:
+                process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+              messages: [
+                {
+                  role: 'user',
+                  content: COOKLANG_PROMPT + html.slice(0, 50000),
+                },
+              ],
+              max_tokens: 4000,
+            }),
           },
-          body: JSON.stringify({
-            model: process.env.OPENROUTER_MODEL || "anthropic/claude-3.5-sonnet",
-            messages: [{ role: "user", content: COOKLANG_PROMPT + html.slice(0, 50000) }],
-            max_tokens: 4000,
-          }),
-        })
+        )
 
         if (aiResponse.ok) {
           const data = await aiResponse.json()
           const content = data.choices?.[0]?.message?.content
           if (content) {
             const cooklangSource = stripMarkdownCodeBlocks(content)
-            const title = extractTitleFromCooklang(cooklangSource) || "Imported Recipe"
+            const title =
+              extractTitleFromCooklang(cooklangSource) || 'Imported Recipe'
             const servingsMatch = cooklangSource.match(/servings:\s*(\d+)/)
-            const servings = servingsMatch ? parseInt(servingsMatch[1]) : undefined
-            return { cooklangSource, title, servings, image }
+            const servings = servingsMatch
+              ? parseInt(servingsMatch[1])
+              : undefined
+
+            const existingCategories = await ctx.runQuery(
+              internal.recipes.listCategoryNames,
+            )
+            const ingredients = extractIngredientsFromCooklang(cooklangSource)
+            const tagResult = await generateTags(
+              openrouterKey,
+              title,
+              ingredients,
+              existingCategories,
+            )
+
+            return {
+              cooklangSource,
+              title,
+              servings,
+              image,
+              suggestedCategory: tagResult.category,
+              isNewCategory: tagResult.isNewCategory,
+              suggestedTags: tagResult.tags,
+            }
           }
         }
       } catch {
@@ -407,7 +560,9 @@ export const importFromUrl = action({
     const recipeSchema = extractJsonLdRecipe(html)
 
     if (!recipeSchema) {
-      throw new Error("No recipe data found. Set OPENROUTER_API_KEY in Convex for AI extraction.")
+      throw new Error(
+        'No recipe data found. Set OPENROUTER_API_KEY in Convex for AI extraction.',
+      )
     }
 
     const cooklangSource = recipeSchemaTooCooklang(recipeSchema)
@@ -424,30 +579,84 @@ export const importFromUrl = action({
 
     let schemaImage: string | undefined
     if (recipeSchema.image) {
-      schemaImage = Array.isArray(recipeSchema.image) ? recipeSchema.image[0] : recipeSchema.image
+      schemaImage = Array.isArray(recipeSchema.image)
+        ? recipeSchema.image[0]
+        : recipeSchema.image
     }
 
     return { cooklangSource, title, servings, image: image || schemaImage }
   },
 })
 
+export const listCategoryNames = internalQuery({
+  args: {},
+  returns: v.array(v.string()),
+  handler: async (ctx) => {
+    const categories = await ctx.db.query('categories').collect()
+    if (categories.length === 0) {
+      return DEFAULT_CATEGORIES
+    }
+    return categories.map((c) => c.name)
+  },
+})
+
+export const listCategories = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id('categories'),
+      _creationTime: v.number(),
+      name: v.string(),
+      slug: v.string(),
+      icon: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx) => {
+    return await ctx.db.query('categories').collect()
+  },
+})
+
+export const getDefaultCategories = query({
+  args: {},
+  returns: v.array(v.string()),
+  handler: () => {
+    return DEFAULT_CATEGORIES
+  },
+})
+
+export const createCategory = mutation({
+  args: { name: v.string() },
+  returns: v.id('categories'),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error('Not authenticated')
+    const slug = args.name.toLowerCase().replace(/\s+/g, '-')
+    const existing = await ctx.db
+      .query('categories')
+      .withIndex('by_slug', (q) => q.eq('slug', slug))
+      .first()
+    if (existing) return existing._id
+    return await ctx.db.insert('categories', { name: args.name, slug })
+  },
+})
+
 export const markCooked = mutation({
   args: {
-    recipeId: v.id("recipes"),
+    recipeId: v.id('recipes'),
     deductions: v.array(
       v.object({
-        pantryItemId: v.id("pantryItems"),
+        pantryItemId: v.id('pantryItems'),
         quantity: v.number(),
-      })
+      }),
     ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
-    if (!identity) throw new Error("Not authenticated")
+    if (!identity) throw new Error('Not authenticated')
     for (const deduction of args.deductions) {
       if (deduction.quantity < 0) {
-        throw new Error("Deduction quantity cannot be negative")
+        throw new Error('Deduction quantity cannot be negative')
       }
     }
     for (const deduction of args.deductions) {
@@ -458,5 +667,75 @@ export const markCooked = mutation({
       }
     }
     return null
+  },
+})
+
+export const generateTagsForRecipe = action({
+  args: { recipeId: v.id('recipes') },
+  returns: v.object({
+    category: v.optional(v.string()),
+    isNewCategory: v.boolean(),
+    tags: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error('Not authenticated')
+
+    const recipe = await ctx.runQuery(internal.recipes.getRecipeInternal, {
+      id: args.recipeId,
+    })
+    if (!recipe) throw new Error('Recipe not found')
+    if (recipe.userId !== identity.subject) throw new Error('Not authorized')
+
+    const openrouterKey = process.env.OPENROUTER_API_KEY
+    if (!openrouterKey) {
+      throw new Error('AI tagging requires OPENROUTER_API_KEY')
+    }
+
+    const existingCategories = await ctx.runQuery(internal.recipes.listCategoryNames)
+    const ingredients = recipe.parsedIngredients.map((i) => i.originalText)
+
+    const result = await generateTags(
+      openrouterKey,
+      recipe.title,
+      ingredients,
+      existingCategories,
+    )
+
+    return {
+      category: result.category,
+      isNewCategory: result.isNewCategory ?? false,
+      tags: result.tags ?? [],
+    }
+  },
+})
+
+export const getRecipeInternal = internalQuery({
+  args: { id: v.id('recipes') },
+  returns: v.union(
+    v.object({
+      _id: v.id('recipes'),
+      userId: v.string(),
+      title: v.string(),
+      parsedIngredients: v.array(
+        v.object({
+          originalText: v.string(),
+          quantity: v.optional(v.number()),
+          unit: v.optional(v.string()),
+          ingredientId: v.optional(v.id('ingredients')),
+        }),
+      ),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const recipe = await ctx.db.get(args.id)
+    if (!recipe) return null
+    return {
+      _id: recipe._id,
+      userId: recipe.userId,
+      title: recipe.title,
+      parsedIngredients: recipe.parsedIngredients,
+    }
   },
 })

@@ -21,7 +21,11 @@ type PantryItem = {
   }
 }
 
-const PantryItemCard = ({ item, onAdjust, onRemove }: {
+const PantryItemCard = ({
+  item,
+  onAdjust,
+  onRemove,
+}: {
   item: PantryItem
   onAdjust: (id: Id<'pantryItems'>, delta: number) => void
   onRemove: (id: Id<'pantryItems'>) => void
@@ -29,12 +33,16 @@ const PantryItemCard = ({ item, onAdjust, onRemove }: {
   <div className="card flex items-center justify-between">
     <div className="flex-1">
       <div className="flex items-center gap-2">
-        <span className="font-medium text-espresso">{item.ingredient.name}</span>
+        <span className="font-medium text-espresso">
+          {item.ingredient.name}
+        </span>
         {item.ingredient.isStaple && (
           <span className="badge badge-sage text-xs">staple</span>
         )}
       </div>
-      <div className="text-sm text-warmgray">{item.quantity} {item.unit}</div>
+      <div className="text-sm text-warmgray">
+        {item.quantity} {item.unit}
+      </div>
     </div>
     <div className="flex items-center gap-2">
       <button
@@ -112,7 +120,17 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
     onClose()
   }
 
-  const categories = ['Produce', 'Meat', 'Dairy', 'Grains', 'Spices', 'Condiments', 'Frozen', 'Canned', 'Other']
+  const categories = [
+    'Produce',
+    'Meat',
+    'Dairy',
+    'Grains',
+    'Spices',
+    'Condiments',
+    'Frozen',
+    'Canned',
+    'Other',
+  ]
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[60]">
@@ -146,7 +164,9 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
                     className="w-full text-left px-4 py-3 rounded-xl hover:bg-sage/10 transition-colors"
                   >
                     <span className="font-medium">{ing.name}</span>
-                    <span className="text-sm text-warmgray ml-2">{ing.category}</span>
+                    <span className="text-sm text-warmgray ml-2">
+                      {ing.category}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -169,7 +189,9 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
         ) : isCreatingNew ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-espresso mb-1">Name</label>
+              <label className="block text-sm font-medium text-espresso mb-1">
+                Name
+              </label>
               <input
                 type="text"
                 value={newName}
@@ -178,19 +200,25 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-espresso mb-1">Category</label>
+              <label className="block text-sm font-medium text-espresso mb-1">
+                Category
+              </label>
               <select
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage"
               >
                 {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-espresso mb-1">Default Unit</label>
+              <label className="block text-sm font-medium text-espresso mb-1">
+                Default Unit
+              </label>
               <input
                 type="text"
                 value={newDefaultUnit}
@@ -210,7 +238,9 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
             </label>
             <div className="flex gap-3">
               <label className="flex-1">
-                <span className="block text-sm font-medium text-espresso mb-1">Quantity</span>
+                <span className="block text-sm font-medium text-espresso mb-1">
+                  Quantity
+                </span>
                 <input
                   type="number"
                   value={quantity}
@@ -221,7 +251,9 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
                 />
               </label>
               <label className="flex-1">
-                <span className="block text-sm font-medium text-espresso mb-1">Unit</span>
+                <span className="block text-sm font-medium text-espresso mb-1">
+                  Unit
+                </span>
                 <UnitPicker
                   value={unit || newDefaultUnit}
                   onChange={setUnit}
@@ -251,11 +283,15 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
         ) : (
           <div className="space-y-4">
             <div className="bg-sage/10 rounded-xl p-4">
-              <div className="font-medium text-espresso">{selectedIngredient?.name}</div>
+              <div className="font-medium text-espresso">
+                {selectedIngredient?.name}
+              </div>
             </div>
             <div className="flex gap-3">
               <label className="flex-1">
-                <span className="block text-sm font-medium text-espresso mb-1">Quantity</span>
+                <span className="block text-sm font-medium text-espresso mb-1">
+                  Quantity
+                </span>
                 <input
                   type="number"
                   value={quantity}
@@ -267,7 +303,9 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
                 />
               </label>
               <label className="flex-1">
-                <span className="block text-sm font-medium text-espresso mb-1">Unit</span>
+                <span className="block text-sm font-medium text-espresso mb-1">
+                  Unit
+                </span>
                 <UnitPicker
                   value={unit}
                   onChange={setUnit}
@@ -285,10 +323,7 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
               >
                 Back
               </button>
-              <button
-                onClick={handleAdd}
-                className="flex-1 btn-primary"
-              >
+              <button onClick={handleAdd} className="flex-1 btn-primary">
                 Add to Pantry
               </button>
             </div>
@@ -313,12 +348,15 @@ const Pantry = () => {
     removeItem({ id })
   }
 
-  const groupedItems = pantryItems?.reduce((acc, item) => {
-    const category = item.ingredient.category
-    if (!acc[category]) acc[category] = []
-    acc[category].push(item)
-    return acc
-  }, {} as Record<string, PantryItem[]>)
+  const groupedItems = pantryItems?.reduce(
+    (acc, item) => {
+      const category = item.ingredient.category
+      if (!acc[category]) acc[category] = []
+      acc[category].push(item)
+      return acc
+    },
+    {} as Record<string, PantryItem[]>,
+  )
 
   const sortedCategories = groupedItems ? Object.keys(groupedItems).sort() : []
 
@@ -327,10 +365,7 @@ const Pantry = () => {
       <header className="page-header">
         <div className="flex items-center justify-between">
           <h1 className="page-title">Pantry</h1>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn-primary"
-          >
+          <button onClick={() => setShowAddModal(true)} className="btn-primary">
             + Add
           </button>
         </div>

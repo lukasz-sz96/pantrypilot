@@ -20,12 +20,16 @@ type IngredientMatch = {
   newCategory?: string
 }
 
-const RecipeCard = ({ recipe }: {
+const RecipeCard = ({
+  recipe,
+}: {
   recipe: {
     _id: string
     title: string
     source?: string
     image?: string
+    category?: string
+    tags?: Array<string>
     parsedIngredients: { originalText: string }[]
   }
 }) => {
@@ -44,22 +48,42 @@ const RecipeCard = ({ recipe }: {
     >
       {recipe.image && (
         <div className="recipe-card-image bg-warmgray/10">
-          <img
-            src={recipe.image}
-            alt=""
-            loading="lazy"
-          />
+          <img src={recipe.image} alt="" loading="lazy" />
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <h3 className="font-display text-lg text-espresso line-clamp-2">{recipe.title}</h3>
+        <div className="flex items-center gap-2 mb-1">
+          {recipe.category && (
+            <span className="px-2 py-0.5 rounded-full bg-sage/20 text-sage-dark text-xs font-medium">
+              {recipe.category}
+            </span>
+          )}
+        </div>
+        <h3 className="font-display text-lg text-espresso line-clamp-2">
+          {recipe.title}
+        </h3>
         <div className="flex items-center gap-3 mt-2 text-sm text-warmgray">
           <span>{recipe.parsedIngredients.length} ingredients</span>
         </div>
-        {hostname && (
-          <div className="mt-1 text-xs text-warmgray truncate">
-            {hostname}
+        {recipe.tags && recipe.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {recipe.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="px-2 py-0.5 rounded-full bg-warmgray/10 text-warmgray text-xs"
+              >
+                {tag}
+              </span>
+            ))}
+            {recipe.tags.length > 3 && (
+              <span className="text-xs text-warmgray">
+                +{recipe.tags.length - 3}
+              </span>
+            )}
           </div>
+        )}
+        {hostname && (
+          <div className="mt-1 text-xs text-warmgray truncate">{hostname}</div>
         )}
       </div>
     </Link>
@@ -74,6 +98,9 @@ const AddRecipeModal = ({ onClose }: { onClose: () => void }) => {
     source: string
     image?: string
     manualIngredients?: { name: string; quantity?: number; unit?: string }[]
+    suggestedCategory?: string
+    isNewCategory?: boolean
+    suggestedTags?: Array<string>
   } | null>(null)
 
   if (importData) {
@@ -84,6 +111,9 @@ const AddRecipeModal = ({ onClose }: { onClose: () => void }) => {
         source={importData.source}
         image={importData.image}
         manualIngredients={importData.manualIngredients}
+        suggestedCategory={importData.suggestedCategory}
+        isNewCategory={importData.isNewCategory}
+        suggestedTags={importData.suggestedTags}
         onClose={onClose}
         onBack={() => setImportData(null)}
       />
@@ -118,7 +148,9 @@ const AddRecipeModal = ({ onClose }: { onClose: () => void }) => {
               onClick={() => setMode('manual')}
               className="w-full text-left p-4 rounded-xl bg-white border border-warmgray/20 hover:border-sage transition-colors"
             >
-              <div className="font-semibold text-espresso">Write in Cooklang</div>
+              <div className="font-semibold text-espresso">
+                Write in Cooklang
+              </div>
               <div className="text-sm text-warmgray mt-1">
                 Create a recipe using Cooklang syntax
               </div>
@@ -149,7 +181,15 @@ const ImportRecipeForm = ({
   onImported,
 }: {
   onBack: () => void
-  onImported: (data: { cooklangSource: string; title: string; source: string; image?: string }) => void
+  onImported: (data: {
+    cooklangSource: string
+    title: string
+    source: string
+    image?: string
+    suggestedCategory?: string
+    isNewCategory?: boolean
+    suggestedTags?: Array<string>
+  }) => void
 }) => {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -168,6 +208,9 @@ const ImportRecipeForm = ({
         title: result.title,
         source: url.trim(),
         image: result.image,
+        suggestedCategory: result.suggestedCategory,
+        isNewCategory: result.isNewCategory,
+        suggestedTags: result.suggestedTags,
       })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to import recipe')
@@ -179,7 +222,9 @@ const ImportRecipeForm = ({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-espresso mb-1">Recipe URL</label>
+        <label className="block text-sm font-medium text-espresso mb-1">
+          Recipe URL
+        </label>
         <input
           type="url"
           value={url}
@@ -217,7 +262,12 @@ const ManualRecipeForm = ({
   onContinue,
 }: {
   onBack: () => void
-  onContinue: (data: { cooklangSource: string; title: string; source: string; manualIngredients?: { name: string; quantity?: number; unit?: string }[] }) => void
+  onContinue: (data: {
+    cooklangSource: string
+    title: string
+    source: string
+    manualIngredients?: { name: string; quantity?: number; unit?: string }[]
+  }) => void
 }) => {
   const [title, setTitle] = useState('')
   const [source, setSource] = useState('')
@@ -245,7 +295,7 @@ const ManualRecipeForm = ({
     onContinue({
       cooklangSource,
       title: title.trim(),
-      source: source.trim() || undefined as any,
+      source: source.trim() || (undefined as any),
       manualIngredients: parsedIngredients,
     })
   }
@@ -253,7 +303,9 @@ const ManualRecipeForm = ({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-espresso mb-1">Recipe Title</label>
+        <label className="block text-sm font-medium text-espresso mb-1">
+          Recipe Title
+        </label>
         <input
           type="text"
           value={title}
@@ -264,7 +316,9 @@ const ManualRecipeForm = ({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-espresso mb-1">Source (optional)</label>
+        <label className="block text-sm font-medium text-espresso mb-1">
+          Source (optional)
+        </label>
         <input
           type="text"
           value={source}
@@ -274,7 +328,9 @@ const ManualRecipeForm = ({
         />
       </div>
       <div>
-        <label className="block text-sm font-medium text-espresso mb-1">Ingredients</label>
+        <label className="block text-sm font-medium text-espresso mb-1">
+          Ingredients
+        </label>
         <textarea
           value={ingredients}
           onChange={(e) => setIngredients(e.target.value)}
@@ -282,12 +338,12 @@ const ManualRecipeForm = ({
           rows={4}
           className="w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage text-sm"
         />
-        <p className="text-xs text-warmgray mt-1">
-          One ingredient per line
-        </p>
+        <p className="text-xs text-warmgray mt-1">One ingredient per line</p>
       </div>
       <div>
-        <label className="block text-sm font-medium text-espresso mb-1">Instructions</label>
+        <label className="block text-sm font-medium text-espresso mb-1">
+          Instructions
+        </label>
         <textarea
           value={steps}
           onChange={(e) => setSteps(e.target.value)}
@@ -295,9 +351,7 @@ const ManualRecipeForm = ({
           rows={4}
           className="w-full px-4 py-3 rounded-xl border border-warmgray/30 bg-white focus:outline-none focus:ring-2 focus:ring-sage text-sm"
         />
-        <p className="text-xs text-warmgray mt-1">
-          One step per line
-        </p>
+        <p className="text-xs text-warmgray mt-1">One step per line</p>
       </div>
       <div className="flex gap-3 pt-2">
         <button
@@ -324,6 +378,9 @@ const RecipePreviewModal = ({
   source,
   image,
   manualIngredients,
+  suggestedCategory,
+  isNewCategory,
+  suggestedTags,
   onClose,
   onBack,
 }: {
@@ -332,14 +389,20 @@ const RecipePreviewModal = ({
   source: string
   image?: string
   manualIngredients?: { name: string; quantity?: number; unit?: string }[]
+  suggestedCategory?: string
+  isNewCategory?: boolean
+  suggestedTags?: Array<string>
   onClose: () => void
   onBack: () => void
 }) => {
   const navigate = useNavigate()
   const allIngredients = useQuery(api.ingredients.list)
+  const defaultCategories = useQuery(api.recipes.getDefaultCategories)
+  const dbCategories = useQuery(api.recipes.listCategories)
   const createIngredient = useMutation(api.ingredients.create)
   const addAlias = useMutation(api.ingredients.addAlias)
   const saveRecipe = useMutation(api.recipes.save)
+  const createCategory = useMutation(api.recipes.createCategory)
 
   const parsed = parseCooklang(cooklangSource)
 
@@ -356,9 +419,34 @@ const RecipePreviewModal = ({
         unit: ing.unit,
       }))
 
-  const [matches, setMatches] = useState<IngredientMatch[]>(() => initialIngredients)
+  const [matches, setMatches] = useState<IngredientMatch[]>(
+    () => initialIngredients,
+  )
   const [saving, setSaving] = useState(false)
-  const [editableTitle, setEditableTitle] = useState(title || parsed.title || 'Untitled Recipe')
+  const [editableTitle, setEditableTitle] = useState(
+    title || parsed.title || 'Untitled Recipe',
+  )
+  const [selectedCategory, setSelectedCategory] = useState(
+    suggestedCategory || '',
+  )
+  const [tags, setTags] = useState<Array<string>>(suggestedTags || [])
+  const [newTag, setNewTag] = useState('')
+
+  const allCategories = [
+    ...(defaultCategories || []),
+    ...(dbCategories || []).map((c) => c.name),
+  ].filter((c, i, arr) => arr.indexOf(c) === i)
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter((t) => t !== tagToRemove))
+  }
+
+  const addTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()])
+      setNewTag('')
+    }
+  }
 
   const findMatch = (text: string) => {
     if (!allIngredients) return undefined
@@ -366,7 +454,7 @@ const RecipePreviewModal = ({
     return allIngredients.find(
       (i) =>
         i.normalizedName === normalized ||
-        (i.aliases && i.aliases.some((a) => a.toLowerCase() === normalized))
+        (i.aliases && i.aliases.some((a) => a.toLowerCase() === normalized)),
     )
   }
 
@@ -374,7 +462,9 @@ const RecipePreviewModal = ({
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
         <div className="bg-cream rounded-2xl p-6">
-          <div className="animate-pulse text-warmgray">Loading ingredients...</div>
+          <div className="animate-pulse text-warmgray">
+            Loading ingredients...
+          </div>
         </div>
       </div>
     )
@@ -386,14 +476,33 @@ const RecipePreviewModal = ({
   }))
 
   const unmatchedCount = matchedIngredients.filter(
-    (m) => !m.matchedIngredient && !m.isNew
+    (m) => !m.matchedIngredient && !m.isNew,
   ).length
 
-  const handleLinkIngredient = (index: number, ingredient: { _id: Id<'ingredients'>; name: string; aliases?: string[]; category: string }) => {
+  const handleLinkIngredient = (
+    index: number,
+    ingredient: {
+      _id: Id<'ingredients'>
+      name: string
+      aliases?: string[]
+      category: string
+    },
+  ) => {
     setMatches((prev) =>
       prev.map((m, i) =>
-        i === index ? { ...m, matchedIngredient: { _id: ingredient._id, name: ingredient.name, aliases: ingredient.aliases, category: ingredient.category }, isNew: false } : m
-      )
+        i === index
+          ? {
+              ...m,
+              matchedIngredient: {
+                _id: ingredient._id,
+                name: ingredient.name,
+                aliases: ingredient.aliases,
+                category: ingredient.category,
+              },
+              isNew: false,
+            }
+          : m,
+      ),
     )
   }
 
@@ -401,9 +510,15 @@ const RecipePreviewModal = ({
     setMatches((prev) =>
       prev.map((m, i) =>
         i === index
-          ? { ...m, isNew: true, newName: name, newCategory: category, matchedIngredient: undefined }
-          : m
-      )
+          ? {
+              ...m,
+              isNew: true,
+              newName: name,
+              newCategory: category,
+              matchedIngredient: undefined,
+            }
+          : m,
+      ),
     )
   }
 
@@ -417,9 +532,10 @@ const RecipePreviewModal = ({
           ingredientIds.push(match.matchedIngredient._id)
           const aliases = match.matchedIngredient.aliases ?? []
           if (
-            match.originalText.toLowerCase() !== match.matchedIngredient.name.toLowerCase() &&
+            match.originalText.toLowerCase() !==
+              match.matchedIngredient.name.toLowerCase() &&
             !aliases.some(
-              (a) => a.toLowerCase() === match.originalText.toLowerCase()
+              (a) => a.toLowerCase() === match.originalText.toLowerCase(),
             )
           ) {
             await addAlias({
@@ -430,9 +546,10 @@ const RecipePreviewModal = ({
         } else if (match.isNew && match.newName) {
           const newId = await createIngredient({
             name: match.newName,
-            aliases: match.newName.toLowerCase() !== match.originalText.toLowerCase()
-              ? [match.originalText]
-              : [],
+            aliases:
+              match.newName.toLowerCase() !== match.originalText.toLowerCase()
+                ? [match.originalText]
+                : [],
             category: match.newCategory || 'Other',
             isStaple: false,
             defaultUnit: match.unit || 'unit',
@@ -441,6 +558,13 @@ const RecipePreviewModal = ({
         } else {
           ingredientIds.push(undefined)
         }
+      }
+
+      if (
+        selectedCategory &&
+        (isNewCategory || !allCategories.includes(selectedCategory))
+      ) {
+        await createCategory({ name: selectedCategory })
       }
 
       const recipeId = await saveRecipe({
@@ -456,6 +580,8 @@ const RecipePreviewModal = ({
         parsedSteps: parsed.steps,
         servings: parsed.servings,
         image,
+        category: selectedCategory || undefined,
+        tags: tags.length > 0 ? tags : undefined,
       })
 
       onClose()
@@ -486,13 +612,96 @@ const RecipePreviewModal = ({
           </button>
         </div>
 
+        <div className="mb-4 space-y-3">
+          <div>
+            <label className="text-sm font-semibold text-warmgray uppercase tracking-wide mb-2 flex items-center gap-2">
+              Category
+              {suggestedCategory && (
+                <span className="text-xs font-normal normal-case text-sage">
+                  ✨ AI suggested
+                </span>
+              )}
+            </label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-warmgray/20 bg-white text-espresso focus:outline-none focus:ring-2 focus:ring-sage"
+            >
+              <option value="">No category</option>
+              {allCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="Or type a new category..."
+              value={
+                !allCategories.includes(selectedCategory)
+                  ? selectedCategory
+                  : ''
+              }
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full mt-2 px-3 py-2 rounded-xl border border-warmgray/20 bg-white text-sm text-espresso focus:outline-none focus:ring-2 focus:ring-sage"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold text-warmgray uppercase tracking-wide mb-2 flex items-center gap-2">
+              Tags
+              {suggestedTags && suggestedTags.length > 0 && (
+                <span className="text-xs font-normal normal-case text-sage">
+                  ✨ AI suggested
+                </span>
+              )}
+            </label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-sage/20 text-sage-dark text-sm"
+                >
+                  {tag}
+                  <button
+                    onClick={() => removeTag(tag)}
+                    className="hover:text-terracotta"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Add a tag..."
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === 'Enter' && (e.preventDefault(), addTag())
+                }
+                className="flex-1 px-3 py-2 rounded-xl border border-warmgray/20 bg-white text-sm text-espresso focus:outline-none focus:ring-2 focus:ring-sage"
+              />
+              <button
+                onClick={addTag}
+                disabled={!newTag.trim()}
+                className="px-4 py-2 rounded-xl bg-sage/10 text-sage-dark text-sm font-medium hover:bg-sage/20 transition-colors disabled:opacity-50"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-warmgray uppercase tracking-wide mb-3">
             Ingredients ({matchedIngredients.length})
           </h3>
           {unmatchedCount > 0 && (
             <p className="text-sm text-terracotta mb-3">
-              {unmatchedCount} ingredient{unmatchedCount > 1 ? 's' : ''} need linking
+              {unmatchedCount} ingredient{unmatchedCount > 1 ? 's' : ''} need
+              linking
             </p>
           )}
           <div className="space-y-2">
@@ -552,7 +761,7 @@ const IngredientMatchRow = ({
     aliases?: string[]
     category: string
   }[]
-  onLink: (ing: typeof allIngredients[0]) => void
+  onLink: (ing: (typeof allIngredients)[0]) => void
   onCreateNew: (name: string, category: string) => void
 }) => {
   const [expanded, setExpanded] = useState(false)
@@ -567,11 +776,24 @@ const IngredientMatchRow = ({
     ? allIngredients.filter(
         (i) =>
           i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (i.aliases && i.aliases.some((a) => a.toLowerCase().includes(searchQuery.toLowerCase())))
+          (i.aliases &&
+            i.aliases.some((a) =>
+              a.toLowerCase().includes(searchQuery.toLowerCase()),
+            )),
       )
     : allIngredients.slice(0, 5)
 
-  const categories = ['Produce', 'Meat', 'Dairy', 'Grains', 'Spices', 'Condiments', 'Frozen', 'Canned', 'Other']
+  const categories = [
+    'Produce',
+    'Meat',
+    'Dairy',
+    'Grains',
+    'Spices',
+    'Condiments',
+    'Frozen',
+    'Canned',
+    'Other',
+  ]
 
   const quantityText = match.quantity
     ? `${match.quantity}${match.unit ? ` ${match.unit}` : ''}`
@@ -585,7 +807,9 @@ const IngredientMatchRow = ({
       >
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-espresso">{match.originalText}</span>
+            <span className="font-medium text-espresso">
+              {match.originalText}
+            </span>
             {quantityText && (
               <span className="text-sm text-warmgray">({quantityText})</span>
             )}
@@ -646,7 +870,9 @@ const IngredientMatchRow = ({
             ))}
           </div>
           <div className="border-t border-warmgray/10 pt-3">
-            <p className="text-xs text-warmgray mb-2">Or create new ingredient:</p>
+            <p className="text-xs text-warmgray mb-2">
+              Or create new ingredient:
+            </p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -661,7 +887,9 @@ const IngredientMatchRow = ({
                 className="px-3 py-2 rounded-lg border border-warmgray/20 text-sm focus:outline-none focus:ring-1 focus:ring-sage"
               >
                 {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
             </div>
@@ -685,38 +913,134 @@ const IngredientMatchRow = ({
 const Recipes = () => {
   const recipes = useQuery(api.recipes.list)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedTags, setSelectedTags] = useState<Array<string>>([])
+
+  const categories = recipes
+    ? Array.from(new Set(recipes.map((r) => r.category).filter(Boolean)))
+    : []
+
+  const allTags = recipes
+    ? Array.from(
+        new Set(recipes.flatMap((r) => r.tags || []).filter(Boolean)),
+      ).sort()
+    : []
+
+  const filteredRecipes = recipes
+    ? recipes.filter((r) => {
+        if (selectedCategory && r.category !== selectedCategory) return false
+        if (
+          selectedTags.length > 0 &&
+          !selectedTags.every((t) => r.tags?.includes(t))
+        )
+          return false
+        return true
+      })
+    : undefined
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    )
+  }
 
   return (
     <>
       <header className="page-header">
         <div className="flex items-center justify-between">
           <h1 className="page-title">Recipes</h1>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn-primary"
-          >
+          <button onClick={() => setShowAddModal(true)} className="btn-primary">
             + Add
           </button>
         </div>
       </header>
-      <div className="content-section py-4">
-        {recipes === undefined ? (
-          <div className="text-center py-8">
-            <div className="animate-pulse text-warmgray">Loading recipes...</div>
-          </div>
-        ) : recipes.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-warmgray mb-4">No recipes yet.</p>
+
+      {recipes && recipes.length > 0 && (
+        <div className="content-section pt-2 pb-0">
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             <button
-              onClick={() => setShowAddModal(true)}
-              className="btn-primary"
+              onClick={() => setSelectedCategory(null)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedCategory === null
+                  ? 'bg-sage text-white'
+                  : 'bg-warmgray/10 text-espresso hover:bg-warmgray/20'
+              }`}
             >
-              Add your first recipe
+              All ({recipes.length})
             </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() =>
+                  setSelectedCategory(selectedCategory === cat ? null : cat!)
+                }
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  selectedCategory === cat
+                    ? 'bg-sage text-white'
+                    : 'bg-warmgray/10 text-espresso hover:bg-warmgray/20'
+                }`}
+              >
+                {cat} ({recipes.filter((r) => r.category === cat).length})
+              </button>
+            ))}
+          </div>
+
+          {allTags.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto py-2 -mx-4 px-4 scrollbar-hide">
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                    selectedTags.includes(tag)
+                      ? 'bg-terracotta/20 text-terracotta border border-terracotta/30'
+                      : 'bg-warmgray/5 text-warmgray border border-warmgray/10 hover:bg-warmgray/10'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+              {selectedTags.length > 0 && (
+                <button
+                  onClick={() => setSelectedTags([])}
+                  className="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap text-warmgray hover:text-terracotta transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="content-section py-4">
+        {filteredRecipes === undefined ? (
+          <div className="text-center py-8">
+            <div className="animate-pulse text-warmgray">
+              Loading recipes...
+            </div>
+          </div>
+        ) : filteredRecipes.length === 0 ? (
+          <div className="text-center py-8">
+            {recipes && recipes.length > 0 ? (
+              <p className="text-warmgray mb-4">
+                No recipes match your filters.
+              </p>
+            ) : (
+              <>
+                <p className="text-warmgray mb-4">No recipes yet.</p>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="btn-primary"
+                >
+                  Add your first recipe
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div className="recipe-grid">
-            {recipes.map((recipe) => (
+            {filteredRecipes.map((recipe) => (
               <RecipeCard key={recipe._id} recipe={recipe} />
             ))}
           </div>

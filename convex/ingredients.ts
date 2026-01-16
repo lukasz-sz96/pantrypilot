@@ -1,8 +1,8 @@
-import { query, mutation } from "./_generated/server"
-import { v } from "convex/values"
+import { query, mutation } from './_generated/server'
+import { v } from 'convex/values'
 
 const ingredientValidator = v.object({
-  _id: v.id("ingredients"),
+  _id: v.id('ingredients'),
   _creationTime: v.number(),
   name: v.string(),
   normalizedName: v.string(),
@@ -16,7 +16,7 @@ export const list = query({
   args: {},
   returns: v.array(ingredientValidator),
   handler: async (ctx) => {
-    return await ctx.db.query("ingredients").collect()
+    return await ctx.db.query('ingredients').collect()
   },
 })
 
@@ -27,17 +27,19 @@ export const search = query({
     const normalized = args.query.toLowerCase().trim()
     if (!normalized) return []
     const byName = await ctx.db
-      .query("ingredients")
-      .withIndex("by_normalizedName", (q) =>
-        q.gte("normalizedName", normalized).lt("normalizedName", normalized + "\uffff")
+      .query('ingredients')
+      .withIndex('by_normalizedName', (q) =>
+        q
+          .gte('normalizedName', normalized)
+          .lt('normalizedName', normalized + '\uffff'),
       )
       .collect()
     const byNameIds = new Set(byName.map((i) => i._id))
-    const all = await ctx.db.query("ingredients").collect()
+    const all = await ctx.db.query('ingredients').collect()
     const byAlias = all.filter(
       (i) =>
         !byNameIds.has(i._id) &&
-        i.aliases?.some((a) => a.toLowerCase().includes(normalized))
+        i.aliases?.some((a) => a.toLowerCase().includes(normalized)),
     )
     return [...byName, ...byAlias]
   },
@@ -49,11 +51,14 @@ export const findByText = query({
   handler: async (ctx, args) => {
     const normalized = args.text.toLowerCase().trim()
     if (!normalized) return null
-    const all = await ctx.db.query("ingredients").collect()
-    return all.find((i) =>
-      i.normalizedName === normalized ||
-      (i.aliases && i.aliases.some((a) => a.toLowerCase() === normalized))
-    ) ?? null
+    const all = await ctx.db.query('ingredients').collect()
+    return (
+      all.find(
+        (i) =>
+          i.normalizedName === normalized ||
+          (i.aliases && i.aliases.some((a) => a.toLowerCase() === normalized)),
+      ) ?? null
+    )
   },
 })
 
@@ -65,14 +70,14 @@ export const create = mutation({
     isStaple: v.boolean(),
     defaultUnit: v.string(),
   },
-  returns: v.id("ingredients"),
+  returns: v.id('ingredients'),
   handler: async (ctx, args) => {
     const trimmedName = args.name.trim()
     if (!trimmedName) {
-      throw new Error("Ingredient name cannot be empty")
+      throw new Error('Ingredient name cannot be empty')
     }
     const normalizedName = trimmedName.toLowerCase()
-    return await ctx.db.insert("ingredients", {
+    return await ctx.db.insert('ingredients', {
       name: trimmedName,
       normalizedName,
       aliases: args.aliases ?? [],
@@ -85,7 +90,7 @@ export const create = mutation({
 
 export const update = mutation({
   args: {
-    id: v.id("ingredients"),
+    id: v.id('ingredients'),
     name: v.optional(v.string()),
     aliases: v.optional(v.array(v.string())),
     category: v.optional(v.string()),
@@ -96,7 +101,7 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id)
     if (!existing) {
-      throw new Error("Ingredient not found")
+      throw new Error('Ingredient not found')
     }
     const { id, ...updates } = args
     const patch: Record<string, unknown> = {}
@@ -107,7 +112,8 @@ export const update = mutation({
     if (updates.aliases !== undefined) patch.aliases = updates.aliases
     if (updates.category !== undefined) patch.category = updates.category
     if (updates.isStaple !== undefined) patch.isStaple = updates.isStaple
-    if (updates.defaultUnit !== undefined) patch.defaultUnit = updates.defaultUnit
+    if (updates.defaultUnit !== undefined)
+      patch.defaultUnit = updates.defaultUnit
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(id, patch)
     }
@@ -117,13 +123,13 @@ export const update = mutation({
 
 export const addAlias = mutation({
   args: {
-    id: v.id("ingredients"),
+    id: v.id('ingredients'),
     alias: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const ingredient = await ctx.db.get(args.id)
-    if (!ingredient) throw new Error("Ingredient not found")
+    if (!ingredient) throw new Error('Ingredient not found')
     const normalizedAlias = args.alias.toLowerCase().trim()
     const currentAliases = ingredient.aliases ?? []
     if (!currentAliases.some((a) => a.toLowerCase() === normalizedAlias)) {
@@ -136,12 +142,12 @@ export const addAlias = mutation({
 })
 
 export const remove = mutation({
-  args: { id: v.id("ingredients") },
+  args: { id: v.id('ingredients') },
   returns: v.null(),
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.id)
     if (!existing) {
-      throw new Error("Ingredient not found")
+      throw new Error('Ingredient not found')
     }
     await ctx.db.delete(args.id)
     return null

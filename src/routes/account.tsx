@@ -43,7 +43,8 @@ const AccountPage = () => {
                 pageScrollBox: 'p-0',
                 profileSection: 'border-cream-dark',
                 formButtonPrimary: 'bg-sage hover:bg-sage-dark',
-                formFieldInput: 'rounded-xl border-warmgray/30 focus:border-sage focus:ring-sage',
+                formFieldInput:
+                  'rounded-xl border-warmgray/30 focus:border-sage focus:ring-sage',
               },
               variables: {
                 colorPrimary: '#7C9A82',
@@ -77,9 +78,12 @@ const AccountPage = () => {
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-cream rounded-2xl p-6 max-w-sm w-full">
-            <h2 className="font-display text-xl text-espresso mb-2">Delete Account?</h2>
+            <h2 className="font-display text-xl text-espresso mb-2">
+              Delete Account?
+            </h2>
             <p className="text-warmgray mb-4">
-              This will permanently delete your account and all your data (recipes, pantry items, shopping lists). This cannot be undone.
+              This will permanently delete your account and all your data
+              (recipes, pantry items, shopping lists). This cannot be undone.
             </p>
             <p className="text-sm text-espresso mb-2">
               Type <strong>DELETE</strong> to confirm:
