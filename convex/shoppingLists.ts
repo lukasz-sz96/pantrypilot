@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server'
 import { v } from 'convex/values'
+import { internal } from './_generated/api'
 
 const itemValidator = v.object({
   ingredientId: v.id('ingredients'),
@@ -110,13 +111,27 @@ export const toggleItem = mutation({
       throw new Error('Invalid item index')
     }
 
+    const item = list.items[index]
+    const wasChecked = item.checked
+    const nowChecked = !wasChecked
+
     const items = [...list.items]
     items[index] = {
-      ...items[index],
-      checked: !items[index].checked,
+      ...item,
+      checked: nowChecked,
     }
 
     await ctx.db.patch(args.listId, { items })
+
+    if (nowChecked) {
+      await ctx.scheduler.runAfter(0, internal.pantry.addToPantry, {
+        userId: identity.subject,
+        ingredientId: item.ingredientId,
+        quantity: item.quantity,
+        unit: item.unit,
+      })
+    }
+
     return null
   },
 })

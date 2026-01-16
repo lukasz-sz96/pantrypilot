@@ -1,4 +1,4 @@
-import { query, mutation } from './_generated/server'
+import { query, mutation, internalMutation } from './_generated/server'
 import { v } from 'convex/values'
 
 export const list = query({
@@ -125,6 +125,39 @@ export const remove = mutation({
     }
     if (existing.userId !== identity.subject) throw new Error('Not authorized')
     await ctx.db.delete(args.id)
+    return null
+  },
+})
+
+export const addToPantry = internalMutation({
+  args: {
+    userId: v.string(),
+    ingredientId: v.id('ingredients'),
+    quantity: v.number(),
+    unit: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query('pantryItems')
+      .withIndex('by_user_ingredient', (q) =>
+        q.eq('userId', args.userId).eq('ingredientId', args.ingredientId),
+      )
+      .unique()
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        quantity: existing.quantity + args.quantity,
+        unit: args.unit,
+      })
+    } else {
+      await ctx.db.insert('pantryItems', {
+        userId: args.userId,
+        ingredientId: args.ingredientId,
+        quantity: args.quantity,
+        unit: args.unit,
+      })
+    }
     return null
   },
 })
