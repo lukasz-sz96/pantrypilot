@@ -43,7 +43,7 @@ const RootComponent = () => {
   const { isSignedIn, isLoaded } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const isAuthRoute = AUTH_ROUTES.includes(location.pathname)
+  const isAuthRoute = AUTH_ROUTES.some(route => location.pathname.startsWith(route))
 
   useEffect(() => {
     if (!isLoaded) return
