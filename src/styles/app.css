@@ -206,13 +206,6 @@
     .main-content {
       margin-left: 240px;
       padding-bottom: 2rem;
-      max-width: 1200px;
-    }
-  }
-
-  @media (min-width: 1400px) {
-    .main-content {
-      margin-left: max(240px, calc((100vw - 1200px) / 2));
     }
   }
 

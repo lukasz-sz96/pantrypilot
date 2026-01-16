@@ -358,6 +358,7 @@ const RecipePreviewModal = ({
 
   const [matches, setMatches] = useState<IngredientMatch[]>(() => initialIngredients)
   const [saving, setSaving] = useState(false)
+  const [editableTitle, setEditableTitle] = useState(title || parsed.title || 'Untitled Recipe')
 
   const findMatch = (text: string) => {
     if (!allIngredients) return undefined
@@ -443,7 +444,7 @@ const RecipePreviewModal = ({
       }
 
       const recipeId = await saveRecipe({
-        title: title || parsed.title,
+        title: editableTitle,
         source: source || undefined,
         cooklangSource,
         parsedIngredients: matchedIngredients.map((m, i) => ({
@@ -469,11 +470,17 @@ const RecipePreviewModal = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[60]">
       <div className="bg-cream w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom)+5rem)] sm:pb-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-display text-espresso">{title || parsed.title}</h2>
+        <div className="flex items-center gap-3 mb-4">
+          <input
+            type="text"
+            value={editableTitle}
+            onChange={(e) => setEditableTitle(e.target.value)}
+            className="flex-1 text-xl font-display text-espresso bg-transparent border-b border-transparent hover:border-warmgray/30 focus:border-sage focus:outline-none py-1"
+            placeholder="Recipe title"
+          />
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-warmgray/20 flex items-center justify-center"
+            className="w-8 h-8 rounded-full hover:bg-warmgray/20 flex items-center justify-center shrink-0"
           >
             ×
           </button>

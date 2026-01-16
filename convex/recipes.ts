@@ -327,8 +327,8 @@ function extractImageFromHtml(html: string): string | undefined {
 
 function extractTitleFromCooklang(cooklang: string): string | undefined {
   for (const line of cooklang.split("\n")) {
-    if (line.startsWith("title:")) {
-      return line.split(":", 1)[1]?.trim()
+    if (line.toLowerCase().startsWith("title:")) {
+      return line.substring(line.indexOf(":") + 1).trim()
     }
   }
   return undefined
