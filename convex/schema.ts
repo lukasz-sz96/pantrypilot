@@ -66,6 +66,7 @@ export default defineSchema({
     category: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     sourceUrl: v.optional(v.string()),
+    image: v.optional(v.string()),
   }),
 
   shoppingLists: defineTable({

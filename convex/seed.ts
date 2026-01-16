@@ -99,6 +99,21 @@ const DEFAULT_INGREDIENTS: Array<{
   { name: 'Chia Seeds', category: 'Other', defaultUnit: 'tbsp', isStaple: false, aliases: [] },
 ]
 
+const GITHUB_IMAGE_BASE = 'https://raw.githubusercontent.com/nicholaswilde/recipes/main/docs/assets/images/'
+
+const slugify = (title: string): string => {
+  return title
+    .toLowerCase()
+    .replace(/['']/g, '')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+const generateImageUrl = (title: string): string => {
+  return `${GITHUB_IMAGE_BASE}${slugify(title)}.jpg`
+}
+
 const CATEGORY_MAP: Record<string, string> = {
   Asian: 'Asian',
   Breads: 'Breads',
@@ -159,7 +174,7 @@ export const seedTemplateRecipes = action({
         parsedSteps: recipe.parsedSteps,
         servings: recipe.servings,
         category: CATEGORY_MAP[recipe.category] || recipe.category,
-        image: recipe.image,
+        image: generateImageUrl(recipe.title),
         sourceUrl: recipe.sourceUrl,
       })
       seeded++
@@ -236,6 +251,7 @@ export const insertTemplate = internalMutation({
       servings: args.servings,
       category: args.category,
       sourceUrl: args.sourceUrl,
+      image: args.image,
     })
   },
 })
@@ -273,6 +289,7 @@ export const listTemplates = internalQuery({
   returns: v.array(
     v.object({
       _id: v.id('templateRecipes'),
+      _creationTime: v.number(),
       title: v.string(),
       cooklangSource: v.string(),
       parsedIngredients: v.array(
@@ -286,6 +303,7 @@ export const listTemplates = internalQuery({
       servings: v.optional(v.number()),
       category: v.optional(v.string()),
       sourceUrl: v.optional(v.string()),
+      image: v.optional(v.string()),
     }),
   ),
   handler: async (ctx) => {
@@ -329,6 +347,7 @@ export const insertUserRecipe = internalMutation({
     servings: v.optional(v.number()),
     category: v.optional(v.string()),
     source: v.optional(v.string()),
+    image: v.optional(v.string()),
   },
   returns: v.id('recipes'),
   handler: async (ctx, args) => {
@@ -341,6 +360,7 @@ export const insertUserRecipe = internalMutation({
       servings: args.servings,
       category: args.category,
       source: args.source,
+      image: args.image,
     })
   },
 })
@@ -433,6 +453,7 @@ export const copyTemplatesToUser = action({
         servings: template.servings,
         category: template.category,
         source: template.sourceUrl,
+        image: template.image || generateImageUrl(template.title),
       })
       copied++
     }
