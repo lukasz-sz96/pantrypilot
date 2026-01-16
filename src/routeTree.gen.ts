@@ -16,6 +16,8 @@ import { Route as RecipesRouteImport } from './routes/recipes'
 import { Route as PantryRouteImport } from './routes/pantry'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
+import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 import { Route as RecipesRecipeIdRouteImport } from './routes/recipes_.$recipeId'
 
 const SignUpRoute = SignUpRouteImport.update({
@@ -53,6 +55,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignUpSplatRoute = SignUpSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => SignUpRoute,
+} as any)
+const SignInSplatRoute = SignInSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => SignInRoute,
+} as any)
 const RecipesRecipeIdRoute = RecipesRecipeIdRouteImport.update({
   id: '/recipes_/$recipeId',
   path: '/recipes/$recipeId',
@@ -65,9 +77,11 @@ export interface FileRoutesByFullPath {
   '/pantry': typeof PantryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-up': typeof SignUpRouteWithChildren
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,9 +89,11 @@ export interface FileRoutesByTo {
   '/pantry': typeof PantryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-up': typeof SignUpRouteWithChildren
   '/recipes/$recipeId': typeof RecipesRecipeIdRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +102,11 @@ export interface FileRoutesById {
   '/pantry': typeof PantryRoute
   '/recipes': typeof RecipesRoute
   '/shopping': typeof ShoppingRoute
-  '/sign-in': typeof SignInRoute
-  '/sign-up': typeof SignUpRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-up': typeof SignUpRouteWithChildren
   '/recipes_/$recipeId': typeof RecipesRecipeIdRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +119,8 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/recipes/$recipeId'
+    | '/sign-in/$'
+    | '/sign-up/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +131,8 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/recipes/$recipeId'
+    | '/sign-in/$'
+    | '/sign-up/$'
   id:
     | '__root__'
     | '/'
@@ -121,6 +143,8 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/recipes_/$recipeId'
+    | '/sign-in/$'
+    | '/sign-up/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,8 +153,8 @@ export interface RootRouteChildren {
   PantryRoute: typeof PantryRoute
   RecipesRoute: typeof RecipesRoute
   ShoppingRoute: typeof ShoppingRoute
-  SignInRoute: typeof SignInRoute
-  SignUpRoute: typeof SignUpRoute
+  SignInRoute: typeof SignInRouteWithChildren
+  SignUpRoute: typeof SignUpRouteWithChildren
   RecipesRecipeIdRoute: typeof RecipesRecipeIdRoute
 }
 
@@ -185,6 +209,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sign-up/$': {
+      id: '/sign-up/$'
+      path: '/$'
+      fullPath: '/sign-up/$'
+      preLoaderRoute: typeof SignUpSplatRouteImport
+      parentRoute: typeof SignUpRoute
+    }
+    '/sign-in/$': {
+      id: '/sign-in/$'
+      path: '/$'
+      fullPath: '/sign-in/$'
+      preLoaderRoute: typeof SignInSplatRouteImport
+      parentRoute: typeof SignInRoute
+    }
     '/recipes_/$recipeId': {
       id: '/recipes_/$recipeId'
       path: '/recipes/$recipeId'
@@ -195,14 +233,36 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface SignInRouteChildren {
+  SignInSplatRoute: typeof SignInSplatRoute
+}
+
+const SignInRouteChildren: SignInRouteChildren = {
+  SignInSplatRoute: SignInSplatRoute,
+}
+
+const SignInRouteWithChildren =
+  SignInRoute._addFileChildren(SignInRouteChildren)
+
+interface SignUpRouteChildren {
+  SignUpSplatRoute: typeof SignUpSplatRoute
+}
+
+const SignUpRouteChildren: SignUpRouteChildren = {
+  SignUpSplatRoute: SignUpSplatRoute,
+}
+
+const SignUpRouteWithChildren =
+  SignUpRoute._addFileChildren(SignUpRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   PantryRoute: PantryRoute,
   RecipesRoute: RecipesRoute,
   ShoppingRoute: ShoppingRoute,
-  SignInRoute: SignInRoute,
-  SignUpRoute: SignUpRoute,
+  SignInRoute: SignInRouteWithChildren,
+  SignUpRoute: SignUpRouteWithChildren,
   RecipesRecipeIdRoute: RecipesRecipeIdRoute,
 }
 export const routeTree = rootRouteImport

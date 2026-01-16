@@ -91,16 +91,13 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
 
 ### Docker Deployment
 
-The Docker image includes:
-- PantryPilot web app (port 3000)
-- Cooklang import service (port 8080)
-
 Uses [Convex Cloud](https://convex.dev) for the database (free tier available).
 
 #### Prerequisites
 
 1. **Create Convex project**: Run `npx convex dev` locally, then `npx convex deploy`
 2. **Configure Clerk JWT**: In Clerk Dashboard → JWT Templates → Create "Convex" template
+3. **AI Recipe Import** (optional): Add `OPENROUTER_API_KEY` in Convex Dashboard → Settings → Environment Variables
 
 #### Quick Start
 
@@ -118,15 +115,6 @@ docker run -d \
 |----------|----------|-------------|
 | `CONVEX_URL` | Yes | Convex Cloud URL (e.g., `https://your-project.convex.cloud`) |
 | `CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key |
-| `OPENROUTER_API_KEY` | No | OpenRouter API key for AI recipe import |
-| `OPENROUTER_MODEL` | No | AI model (default: `anthropic/claude-3.5-sonnet`) |
-
-#### Ports
-
-| Port | Service |
-|------|---------|
-| 3000 | Web UI |
-| 8080 | Recipe import API (optional) |
 
 #### Unraid
 
@@ -138,15 +126,13 @@ Add container with:
 ## Project Structure
 
 ```
-├── convex/              # Convex backend (schema, queries, mutations)
+├── convex/              # Convex backend (schema, queries, mutations, actions)
 ├── src/
 │   ├── components/      # React components
 │   ├── lib/             # Utilities (cooklang parser, unit conversion)
 │   ├── routes/          # TanStack Router pages
 │   └── styles/          # CSS styles
-├── services/
-│   └── cooklang-import/ # AI recipe import microservice
-└── docker-compose.yml
+└── Dockerfile
 ```
 
 ## License

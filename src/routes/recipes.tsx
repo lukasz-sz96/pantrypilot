@@ -189,7 +189,7 @@ const ImportRecipeForm = ({
           autoFocus
         />
         <p className="text-xs text-warmgray mt-2">
-          Works with most recipe websites via cook.md
+          Works with most recipe websites using AI extraction
         </p>
       </div>
       {error && <p className="text-sm text-terracotta">{error}</p>}
