@@ -99,19 +99,40 @@ const DEFAULT_INGREDIENTS: Array<{
   { name: 'Chia Seeds', category: 'Other', defaultUnit: 'tbsp', isStaple: false, aliases: [] },
 ]
 
-const GITHUB_IMAGE_BASE = 'https://raw.githubusercontent.com/nicholaswilde/recipes/main/docs/assets/images/'
+const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/nicholaswilde/recipes/main/cook/'
 
-const slugify = (title: string): string => {
-  return title
-    .toLowerCase()
-    .replace(/['']/g, '')
-    .replace(/&/g, 'and')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+const categoryToFolder: Record<string, string> = {
+  Asian: 'asian',
+  Breads: 'breads',
+  Breakfast: 'breakfast',
+  Desserts: 'desserts',
+  Italian: 'italian',
+  Lunches: 'lunches',
+  Main: 'main',
+  Mexican: 'mexican',
+  Sides: 'sides',
+  'Soups & Stews': 'soups-and-stews',
+  Vegetarian: 'vegetarian',
 }
 
-const generateImageUrl = (title: string): string => {
-  return `${GITHUB_IMAGE_BASE}${slugify(title)}.jpg`
+const IMAGE_EXTENSIONS = ['jpg', 'png', 'webp', 'jpeg']
+
+const findImageUrl = async (title: string, category: string): Promise<string | undefined> => {
+  const folder = categoryToFolder[category] || category.toLowerCase()
+  const encodedTitle = encodeURIComponent(title)
+
+  for (const ext of IMAGE_EXTENSIONS) {
+    const url = `${GITHUB_RAW_BASE}${folder}/${encodedTitle}.${ext}`
+    try {
+      const response = await fetch(url, { method: 'HEAD' })
+      if (response.ok) {
+        return url
+      }
+    } catch {
+      continue
+    }
+  }
+  return undefined
 }
 
 const CATEGORY_MAP: Record<string, string> = {
@@ -167,6 +188,7 @@ export const seedTemplateRecipes = action({
     }>
 
     for (const recipe of recipes) {
+      const imageUrl = await findImageUrl(recipe.title, recipe.category)
       await ctx.runMutation(internal.seed.insertTemplate, {
         title: recipe.title,
         cooklangSource: recipe.cooklangSource,
@@ -174,7 +196,7 @@ export const seedTemplateRecipes = action({
         parsedSteps: recipe.parsedSteps,
         servings: recipe.servings,
         category: CATEGORY_MAP[recipe.category] || recipe.category,
-        image: generateImageUrl(recipe.title),
+        image: imageUrl,
         sourceUrl: recipe.sourceUrl,
       })
       seeded++
@@ -429,14 +451,6 @@ export const copyTemplatesToUser = action({
         }
       }
 
-      for (const variant of variants) {
-        for (const ing of ingredients) {
-          if (ing.normalizedName.includes(variant) || variant.includes(ing.normalizedName)) {
-            return ing._id
-          }
-        }
-      }
-
       return undefined
     }
 
@@ -460,6 +474,7 @@ export const copyTemplatesToUser = action({
         })
       }
 
+      const imageUrl = template.image || await findImageUrl(template.title, template.category || '')
       await ctx.runMutation(internal.seed.insertUserRecipe, {
         userId,
         title: template.title,
@@ -469,7 +484,7 @@ export const copyTemplatesToUser = action({
         servings: template.servings,
         category: template.category,
         source: template.sourceUrl,
-        image: template.image || generateImageUrl(template.title),
+        image: imageUrl,
       })
       copied++
     }
