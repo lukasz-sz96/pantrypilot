@@ -2,8 +2,11 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
-import { useState } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { parseCooklang, parseIngredientLine } from '../lib/cooklang'
+import { RecipeFilterSidebar } from '../components/RecipeFilterSidebar'
+import { RecipeFilterDrawer } from '../components/RecipeFilterDrawer'
+import { Search, SlidersHorizontal, X } from 'lucide-react'
 
 type IngredientMatch = {
   originalText: string
@@ -33,62 +36,59 @@ const RecipeCard = ({
     parsedIngredients: { originalText: string }[]
   }
 }) => {
-  let hostname = ''
-  if (recipe.source) {
-    try {
-      hostname = new URL(recipe.source).hostname.replace('www.', '')
-    } catch {}
-  }
-
   return (
     <Link
       to="/recipes/$recipeId"
       params={{ recipeId: recipe._id }}
-      className="card block hover:shadow-md transition-shadow overflow-hidden recipe-card-desktop"
+      className="recipe-card"
     >
-      {recipe.image && (
-        <div className="recipe-card-image bg-warmgray/10">
+      <div className="recipe-card-image">
+        {recipe.image ? (
           <img src={recipe.image} alt="" loading="lazy" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          {recipe.category && (
-            <span className="px-2 py-0.5 rounded-full bg-sage/20 text-sage-dark text-xs font-medium">
-              {recipe.category}
-            </span>
-          )}
-        </div>
-        <h3 className="font-display text-lg text-espresso line-clamp-2">
-          {recipe.title}
-        </h3>
-        <div className="flex items-center gap-3 mt-2 text-sm text-warmgray">
-          <span>{recipe.parsedIngredients.length} ingredients</span>
-        </div>
+        ) : (
+          <div className="recipe-card-placeholder" />
+        )}
+        {recipe.category && (
+          <span className="recipe-card-badge">{recipe.category}</span>
+        )}
+      </div>
+      <div className="recipe-card-content">
+        <h3 className="recipe-card-title">{recipe.title}</h3>
+        <p className="recipe-card-meta">
+          {recipe.parsedIngredients.length} ingredients
+        </p>
         {recipe.tags && recipe.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {recipe.tags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-0.5 rounded-full bg-warmgray/10 text-warmgray text-xs"
-              >
+          <div className="recipe-card-tags">
+            {recipe.tags.slice(0, 2).map((tag) => (
+              <span key={tag} className="recipe-card-tag">
                 {tag}
               </span>
             ))}
-            {recipe.tags.length > 3 && (
-              <span className="text-xs text-warmgray">
-                +{recipe.tags.length - 3}
+            {recipe.tags.length > 2 && (
+              <span className="recipe-card-tag-more">
+                +{recipe.tags.length - 2}
               </span>
             )}
           </div>
-        )}
-        {hostname && (
-          <div className="mt-1 text-xs text-warmgray truncate">{hostname}</div>
         )}
       </div>
     </Link>
   )
 }
+
+const RecipeCardSkeleton = () => (
+  <div className="recipe-card-skeleton">
+    <div className="recipe-card-skeleton-image" />
+    <div className="recipe-card-skeleton-content">
+      <div className="recipe-card-skeleton-title" />
+      <div className="recipe-card-skeleton-meta" />
+      <div className="recipe-card-skeleton-tags">
+        <div className="recipe-card-skeleton-tag" />
+        <div className="recipe-card-skeleton-tag" />
+      </div>
+    </div>
+  </div>
+)
 
 const AddRecipeModal = ({ onClose }: { onClose: () => void }) => {
   const [mode, setMode] = useState<'choose' | 'import' | 'manual'>('choose')
@@ -910,142 +910,258 @@ const IngredientMatchRow = ({
   )
 }
 
+const INITIAL_DISPLAY_COUNT = 24
+const LOAD_MORE_COUNT = 24
+
+const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
+
 const Recipes = () => {
   const recipes = useQuery(api.recipes.list)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [selectedTags, setSelectedTags] = useState<Array<string>>([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_COUNT)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const categories = recipes
-    ? Array.from(new Set(recipes.map((r) => r.category).filter(Boolean)))
-    : []
+  const debouncedSearch = useDebounce(searchQuery, 300)
 
-  const allTags = recipes
-    ? Array.from(
-        new Set(recipes.flatMap((r) => r.tags || []).filter(Boolean)),
-      ).sort()
-    : []
+  const categories = useMemo(() => {
+    if (!recipes) return []
+    const categoryMap = new Map<string, number>()
+    recipes.forEach((r) => {
+      if (r.category) {
+        categoryMap.set(r.category, (categoryMap.get(r.category) || 0) + 1)
+      }
+    })
+    return Array.from(categoryMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [recipes])
 
-  const filteredRecipes = recipes
-    ? recipes.filter((r) => {
-        if (selectedCategory && r.category !== selectedCategory) return false
-        if (
-          selectedTags.length > 0 &&
-          !selectedTags.every((t) => r.tags?.includes(t))
-        )
-          return false
-        return true
+  const recipesInCategory = useMemo(() => {
+    if (!recipes) return []
+    return selectedCategory
+      ? recipes.filter((r) => r.category === selectedCategory)
+      : recipes
+  }, [recipes, selectedCategory])
+
+  const availableTags = useMemo(() => {
+    const tagMap = new Map<string, number>()
+    recipesInCategory.forEach((r) => {
+      r.tags?.forEach((tag) => {
+        tagMap.set(tag, (tagMap.get(tag) || 0) + 1)
       })
-    : undefined
+    })
+    return Array.from(tagMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [recipesInCategory])
 
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+  const filteredRecipes = useMemo(() => {
+    if (!recipes) return undefined
+    return recipes.filter((r) => {
+      if (selectedCategory && r.category !== selectedCategory) return false
+      if (selectedTags.length > 0 && !selectedTags.every((t) => r.tags?.includes(t)))
+        return false
+      if (debouncedSearch) {
+        const query = debouncedSearch.toLowerCase()
+        const matchesTitle = r.title.toLowerCase().includes(query)
+        const matchesIngredients = r.parsedIngredients.some((ing) =>
+          ing.originalText.toLowerCase().includes(query)
+        )
+        const matchesTags = r.tags?.some((tag) =>
+          tag.toLowerCase().includes(query)
+        )
+        if (!matchesTitle && !matchesIngredients && !matchesTags) return false
+      }
+      return true
+    })
+  }, [recipes, selectedCategory, selectedTags, debouncedSearch])
+
+  const displayedRecipes = useMemo(() => {
+    return filteredRecipes?.slice(0, displayCount)
+  }, [filteredRecipes, displayCount])
+
+  const hasMore = filteredRecipes && displayCount < filteredRecipes.length
+
+  useEffect(() => {
+    setDisplayCount(INITIAL_DISPLAY_COUNT)
+  }, [selectedCategory, selectedTags, debouncedSearch])
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel || !hasMore) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setDisplayCount((prev) => prev + LOAD_MORE_COUNT)
+        }
+      },
+      { rootMargin: '200px' }
     )
-  }
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [hasMore])
+
+  const handleTagToggle = useCallback((tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    setSelectedCategory(null)
+    setSelectedTags([])
+    setSearchQuery('')
+  }, [])
+
+  const hasActiveFilters = selectedCategory || selectedTags.length > 0 || searchQuery
 
   return (
     <>
-      <header className="page-header">
-        <div className="flex items-center justify-between">
-          <h1 className="page-title">Recipes</h1>
+      <header className="recipes-header">
+        <div className="recipes-header-content">
+          <h1 className="recipes-header-title">Recipes</h1>
           <button onClick={() => setShowAddModal(true)} className="btn-primary">
             + Add
           </button>
         </div>
       </header>
 
-      {recipes && recipes.length > 0 && (
-        <div className="content-section pt-2 pb-0">
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+      <div className="recipes-mobile-search">
+        <div className="recipes-mobile-search-inner">
+          <Search className="recipes-mobile-search-icon" />
+          <input
+            type="text"
+            placeholder="Search recipes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="recipes-mobile-search-input"
+          />
+          {searchQuery && (
             <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                selectedCategory === null
-                  ? 'bg-sage text-white'
-                  : 'bg-warmgray/10 text-espresso hover:bg-warmgray/20'
-              }`}
+              onClick={() => setSearchQuery('')}
+              className="recipes-mobile-search-clear"
+              aria-label="Clear search"
             >
-              All ({recipes.length})
+              <X size={16} />
             </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() =>
-                  setSelectedCategory(selectedCategory === cat ? null : cat!)
-                }
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedCategory === cat
-                    ? 'bg-sage text-white'
-                    : 'bg-warmgray/10 text-espresso hover:bg-warmgray/20'
-                }`}
-              >
-                {cat} ({recipes.filter((r) => r.category === cat).length})
-              </button>
-            ))}
-          </div>
+          )}
+          <button
+            onClick={() => setShowFilterDrawer(true)}
+            className={`recipes-mobile-filter-btn ${hasActiveFilters ? 'active' : ''}`}
+            aria-label="Open filters"
+          >
+            <SlidersHorizontal size={20} />
+            {(selectedCategory || selectedTags.length > 0) && (
+              <span className="recipes-mobile-filter-badge">
+                {(selectedCategory ? 1 : 0) + selectedTags.length}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
 
-          {allTags.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto py-2 -mx-4 px-4 scrollbar-hide">
-              {allTags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => toggleTag(tag)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                    selectedTags.includes(tag)
-                      ? 'bg-terracotta/20 text-terracotta border border-terracotta/30'
-                      : 'bg-warmgray/5 text-warmgray border border-warmgray/10 hover:bg-warmgray/10'
-                  }`}
-                >
-                  {tag}
-                </button>
+      <div className="recipes-page-layout">
+        <RecipeFilterSidebar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          tags={availableTags}
+          selectedTags={selectedTags}
+          onTagToggle={handleTagToggle}
+          onClearFilters={handleClearFilters}
+          totalCount={recipes?.length || 0}
+          filteredCount={filteredRecipes?.length || 0}
+        />
+
+        <main className="recipes-main">
+          {filteredRecipes === undefined ? (
+            <div className="recipe-grid">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <RecipeCardSkeleton key={i} />
               ))}
-              {selectedTags.length > 0 && (
-                <button
-                  onClick={() => setSelectedTags([])}
-                  className="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap text-warmgray hover:text-terracotta transition-colors"
-                >
-                  Clear filters
-                </button>
+            </div>
+          ) : filteredRecipes.length === 0 ? (
+            <div className="recipes-empty">
+              {recipes && recipes.length > 0 ? (
+                <>
+                  <p className="recipes-empty-text">No recipes match your filters.</p>
+                  <button onClick={handleClearFilters} className="recipes-empty-btn">
+                    Clear all filters
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="recipes-empty-text">No recipes yet.</p>
+                  <button
+                    onClick={() => setShowAddModal(true)}
+                    className="btn-primary"
+                  >
+                    Add your first recipe
+                  </button>
+                </>
               )}
             </div>
+          ) : (
+            <>
+              <div className="recipes-results-header">
+                <span className="recipes-results-count">
+                  Showing {displayedRecipes?.length} of {filteredRecipes.length} recipes
+                </span>
+              </div>
+              <div className="recipe-grid">
+                {displayedRecipes?.map((recipe) => (
+                  <RecipeCard key={recipe._id} recipe={recipe} />
+                ))}
+              </div>
+              {hasMore && (
+                <div ref={sentinelRef} className="recipes-load-more">
+                  <div className="recipe-grid">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <RecipeCardSkeleton key={i} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </div>
-      )}
-
-      <div className="content-section py-4">
-        {filteredRecipes === undefined ? (
-          <div className="text-center py-8">
-            <div className="animate-pulse text-warmgray">
-              Loading recipes...
-            </div>
-          </div>
-        ) : filteredRecipes.length === 0 ? (
-          <div className="text-center py-8">
-            {recipes && recipes.length > 0 ? (
-              <p className="text-warmgray mb-4">
-                No recipes match your filters.
-              </p>
-            ) : (
-              <>
-                <p className="text-warmgray mb-4">No recipes yet.</p>
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="btn-primary"
-                >
-                  Add your first recipe
-                </button>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="recipe-grid">
-            {filteredRecipes.map((recipe) => (
-              <RecipeCard key={recipe._id} recipe={recipe} />
-            ))}
-          </div>
-        )}
+        </main>
       </div>
+
+      <RecipeFilterDrawer
+        isOpen={showFilterDrawer}
+        onClose={() => setShowFilterDrawer(false)}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        tags={availableTags}
+        selectedTags={selectedTags}
+        onTagToggle={handleTagToggle}
+        onClearFilters={handleClearFilters}
+        totalCount={recipes?.length || 0}
+      />
+
       {showAddModal && (
         <AddRecipeModal onClose={() => setShowAddModal(false)} />
       )}

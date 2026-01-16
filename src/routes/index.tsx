@@ -166,11 +166,17 @@ const RecipeCard = ({ recipe }: { recipe: RecipeWithAvailability }) => (
         <h3 className="font-display text-lg text-espresso">{recipe.title}</h3>
         <div className="flex items-center gap-2 mt-1 text-sm text-warmgray">
           <span>{recipe.parsedIngredients.length} ingredients</span>
-          {recipe.source && (
+          {recipe.source && recipe.source.startsWith('http') && (
             <>
               <span>•</span>
               <span className="truncate max-w-[120px]">
-                {new URL(recipe.source).hostname.replace('www.', '')}
+                {(() => {
+                  try {
+                    return new URL(recipe.source).hostname.replace('www.', '')
+                  } catch {
+                    return null
+                  }
+                })()}
               </span>
             </>
           )}
