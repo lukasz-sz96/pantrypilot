@@ -4,6 +4,8 @@ A modern kitchen companion app for managing your pantry, recipes, and shopping l
 
 ![PantryPilot](assets/screenshots/main.png)
 
+**[Live Demo](https://pantrypilot.szczesny.dev/)** — try it with `demo@pantrypilot.app` / `demopantry`
+
 <details>
 <summary>Screenshots</summary>
 
@@ -69,15 +71,6 @@ The home screen analyzes your pantry against your recipe collection and shows yo
 - Secure authentication via Clerk (Google, email, etc.)
 - Private data per user
 - Account management and deletion
-
-## Demo
-
-Try PantryPilot without creating an account:
-
-- **Email**: `demo@pantrypilot.app`
-- **Password**: `demopantry`
-
-The demo account has read-only access to a sample recipe collection. Adding recipes, editing, and AI features are disabled.
 
 ## Tech Stack
 
