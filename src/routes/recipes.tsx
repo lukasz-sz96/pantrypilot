@@ -1169,6 +1169,14 @@ const Recipes = () => {
         totalCount={recipes?.length || 0}
       />
 
+      <div className="recipes-fab">
+        <DemoGuard action="Adding recipes">
+          <button onClick={() => setShowAddModal(true)} className="btn-primary">
+            + Add Recipe
+          </button>
+        </DemoGuard>
+      </div>
+
       {showAddModal && (
         <AddRecipeModal onClose={() => setShowAddModal(false)} />
       )}
