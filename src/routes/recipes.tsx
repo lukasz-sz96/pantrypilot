@@ -149,11 +149,9 @@ const AddRecipeModal = ({ onClose }: { onClose: () => void }) => {
               onClick={() => setMode('manual')}
               className="w-full text-left p-4 rounded-xl bg-white border border-warmgray/20 hover:border-sage transition-colors"
             >
-              <div className="font-semibold text-espresso">
-                Write in Cooklang
-              </div>
+              <div className="font-semibold text-espresso">Write by hand</div>
               <div className="text-sm text-warmgray mt-1">
-                Create a recipe using Cooklang syntax
+                Create a recipe manually
               </div>
             </button>
           </div>
@@ -980,16 +978,19 @@ const Recipes = () => {
     if (!recipes) return undefined
     return recipes.filter((r) => {
       if (selectedCategory && r.category !== selectedCategory) return false
-      if (selectedTags.length > 0 && !selectedTags.every((t) => r.tags?.includes(t)))
+      if (
+        selectedTags.length > 0 &&
+        !selectedTags.every((t) => r.tags?.includes(t))
+      )
         return false
       if (debouncedSearch) {
         const query = debouncedSearch.toLowerCase()
         const matchesTitle = r.title.toLowerCase().includes(query)
         const matchesIngredients = r.parsedIngredients.some((ing) =>
-          ing.originalText.toLowerCase().includes(query)
+          ing.originalText.toLowerCase().includes(query),
         )
         const matchesTags = r.tags?.some((tag) =>
-          tag.toLowerCase().includes(query)
+          tag.toLowerCase().includes(query),
         )
         if (!matchesTitle && !matchesIngredients && !matchesTags) return false
       }
@@ -1017,7 +1018,7 @@ const Recipes = () => {
           setDisplayCount((prev) => prev + LOAD_MORE_COUNT)
         }
       },
-      { rootMargin: '200px' }
+      { rootMargin: '200px' },
     )
 
     observer.observe(sentinel)
@@ -1026,7 +1027,7 @@ const Recipes = () => {
 
   const handleTagToggle = useCallback((tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     )
   }, [])
 
@@ -1036,7 +1037,8 @@ const Recipes = () => {
     setSearchQuery('')
   }, [])
 
-  const hasActiveFilters = selectedCategory || selectedTags.length > 0 || searchQuery
+  const hasActiveFilters =
+    selectedCategory || selectedTags.length > 0 || searchQuery
 
   return (
     <>
@@ -1044,7 +1046,10 @@ const Recipes = () => {
         <div className="recipes-header-content">
           <h1 className="recipes-header-title">Recipes</h1>
           <DemoGuard action="Adding recipes">
-            <button onClick={() => setShowAddModal(true)} className="btn-primary">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn-primary"
+            >
               + Add
             </button>
           </DemoGuard>
@@ -1111,8 +1116,13 @@ const Recipes = () => {
             <div className="recipes-empty">
               {recipes && recipes.length > 0 ? (
                 <>
-                  <p className="recipes-empty-text">No recipes match your filters.</p>
-                  <button onClick={handleClearFilters} className="recipes-empty-btn">
+                  <p className="recipes-empty-text">
+                    No recipes match your filters.
+                  </p>
+                  <button
+                    onClick={handleClearFilters}
+                    className="recipes-empty-btn"
+                  >
                     Clear all filters
                   </button>
                 </>
@@ -1134,7 +1144,8 @@ const Recipes = () => {
             <>
               <div className="recipes-results-header">
                 <span className="recipes-results-count">
-                  Showing {displayedRecipes?.length} of {filteredRecipes.length} recipes
+                  Showing {displayedRecipes?.length} of {filteredRecipes.length}{' '}
+                  recipes
                 </span>
               </div>
               <div className="recipe-grid">

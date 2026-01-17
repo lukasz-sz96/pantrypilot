@@ -47,21 +47,21 @@ const Home = () => {
 
   const recipesWithAvailability: RecipeWithAvailability[] = recipes.map(
     (recipe) => {
-      const linkedIngredients = recipe.parsedIngredients.filter(
-        (ing) => ing.ingredientId,
-      )
+      const allIngredients = recipe.parsedIngredients
+      const linkedIngredients = allIngredients.filter((ing) => ing.ingredientId)
+      const unlinkedCount = allIngredients.length - linkedIngredients.length
 
-      const nonStapleIngredients = linkedIngredients.filter(
+      const nonStapleLinked = linkedIngredients.filter(
         (ing) => !stapleIds.has(ing.ingredientId as Id<'ingredients'>),
       )
 
-      const availableCount = nonStapleIngredients.filter((ing) =>
+      const availableCount = nonStapleLinked.filter((ing) =>
         pantryIngredientIds.has(ing.ingredientId as Id<'ingredients'>),
       ).length
 
-      const totalLinked = nonStapleIngredients.length
+      const totalToTrack = nonStapleLinked.length + unlinkedCount
       const percentage =
-        totalLinked > 0 ? (availableCount / totalLinked) * 100 : 100
+        totalToTrack > 0 ? (availableCount / totalToTrack) * 100 : 100
 
       let status: 'ready' | 'almost' | 'far' = 'far'
       if (percentage === 100) status = 'ready'
@@ -70,7 +70,7 @@ const Home = () => {
       return {
         ...recipe,
         availableCount,
-        totalLinked,
+        totalLinked: totalToTrack,
         percentage,
         status,
       }
