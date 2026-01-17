@@ -35,7 +35,11 @@ export const list = query({
       const ingredient = ingredients[i]
       if (ingredient) {
         result.push({
-          ...items[i],
+          _id: items[i]._id,
+          _creationTime: items[i]._creationTime,
+          ingredientId: items[i].ingredientId,
+          quantity: items[i].quantity,
+          unit: items[i].unit,
           ingredient: {
             _id: ingredient._id,
             name: ingredient.name,
