@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server'
 import { v } from 'convex/values'
+import { assertNotDemo } from './auth'
 
 const ingredientValidator = v.object({
   _id: v.id('ingredients'),
@@ -72,6 +73,9 @@ export const create = mutation({
   },
   returns: v.id('ingredients'),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Creating ingredients')
     const trimmedName = args.name.trim()
     if (!trimmedName) {
       throw new Error('Ingredient name cannot be empty')
@@ -99,6 +103,9 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Editing ingredients')
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw new Error('Ingredient not found')
@@ -128,6 +135,9 @@ export const addAlias = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Editing ingredients')
     const ingredient = await ctx.db.get(args.id)
     if (!ingredient) throw new Error('Ingredient not found')
     const normalizedAlias = args.alias.toLowerCase().trim()
@@ -145,6 +155,9 @@ export const remove = mutation({
   args: { id: v.id('ingredients') },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity()
+    if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Deleting ingredients')
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw new Error('Ingredient not found')

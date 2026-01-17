@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import { action, internalQuery, mutation, query } from './_generated/server'
+import { assertNotDemo } from './auth'
 
 const parsedIngredientValidator = v.object({
   originalText: v.string(),
@@ -65,6 +66,7 @@ export const save = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Adding recipes')
     return await ctx.db.insert('recipes', {
       userId: identity.subject,
       title: args.title,
@@ -96,6 +98,7 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Editing recipes')
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw new Error('Recipe not found')
@@ -127,6 +130,7 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Deleting recipes')
     const existing = await ctx.db.get(args.id)
     if (!existing) {
       throw new Error('Recipe not found')
@@ -464,6 +468,7 @@ export const importFromUrl = action({
     suggestedTags: v.optional(v.array(v.string())),
   }),
   handler: async (ctx, args) => {
+    await assertNotDemo(ctx, 'Importing recipes')
     let parsedUrl: URL
     try {
       parsedUrl = new URL(args.url)
@@ -630,6 +635,7 @@ export const createCategory = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Creating categories')
     const slug = args.name.toLowerCase().replace(/\s+/g, '-')
     const existing = await ctx.db
       .query('categories')
@@ -680,6 +686,7 @@ export const generateTagsForRecipe = action({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'AI tagging')
 
     const recipe = await ctx.runQuery(internal.recipes.getRecipeInternal, {
       id: args.recipeId,

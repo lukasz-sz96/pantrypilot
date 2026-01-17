@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useState, useEffect, useRef } from 'react'
 import { convertUnit, canConvert, formatQuantity } from '../lib/units'
+import { DemoGuard } from '~/components/DemoGuard'
 
 const RecipeDetail = () => {
   const { recipeId } = Route.useParams()
@@ -168,15 +169,17 @@ const RecipeDetail = () => {
           </div>
         )}
         <div className="recipe-hero-overlay">
-          <button
-            onClick={() => {
-              setEditImageUrl(recipe.image || '')
-              setShowEditImage(true)
-            }}
-            className="px-3 py-1.5 rounded-lg bg-black/50 text-white text-sm hover:bg-black/70 transition-colors"
-          >
-            {recipe.image ? 'Change' : 'Add'} Image
-          </button>
+          <DemoGuard action="Editing recipes">
+            <button
+              onClick={() => {
+                setEditImageUrl(recipe.image || '')
+                setShowEditImage(true)
+              }}
+              className="px-3 py-1.5 rounded-lg bg-black/50 text-white text-sm hover:bg-black/70 transition-colors"
+            >
+              {recipe.image ? 'Change' : 'Add'} Image
+            </button>
+          </DemoGuard>
         </div>
       </div>
 
@@ -208,32 +211,34 @@ const RecipeDetail = () => {
               </span>
             ))}
           {(!recipe.tags || recipe.tags.length === 0) && (
-            <button
-              onClick={async () => {
-                setGeneratingTags(true)
-                try {
-                  const result = await generateTagsForRecipe({
-                    recipeId: recipe._id,
-                  })
-                  if (result.category && result.isNewCategory) {
-                    await createCategory({ name: result.category })
+            <DemoGuard action="AI features">
+              <button
+                onClick={async () => {
+                  setGeneratingTags(true)
+                  try {
+                    const result = await generateTagsForRecipe({
+                      recipeId: recipe._id,
+                    })
+                    if (result.category && result.isNewCategory) {
+                      await createCategory({ name: result.category })
+                    }
+                    await updateRecipe({
+                      id: recipe._id,
+                      category: result.category,
+                      tags: result.tags,
+                    })
+                  } catch (e) {
+                    console.error('Failed to generate tags:', e)
+                  } finally {
+                    setGeneratingTags(false)
                   }
-                  await updateRecipe({
-                    id: recipe._id,
-                    category: result.category,
-                    tags: result.tags,
-                  })
-                } catch (e) {
-                  console.error('Failed to generate tags:', e)
-                } finally {
-                  setGeneratingTags(false)
-                }
-              }}
-              disabled={generatingTags}
-              className="px-3 py-1 rounded-full border border-dashed border-sage/50 text-sage text-sm hover:bg-sage/10 transition-colors disabled:opacity-50"
-            >
-              {generatingTags ? 'Generating...' : '✨ Generate tags'}
-            </button>
+                }}
+                disabled={generatingTags}
+                className="px-3 py-1 rounded-full border border-dashed border-sage/50 text-sage text-sm hover:bg-sage/10 transition-colors disabled:opacity-50"
+              >
+                {generatingTags ? 'Generating...' : '✨ Generate tags'}
+              </button>
+            </DemoGuard>
           )}
         </div>
 
@@ -405,12 +410,14 @@ const RecipeDetail = () => {
               </Link>
             </div>
 
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="w-full py-3 rounded-xl text-terracotta hover:bg-terracotta/10 transition-colors text-sm"
-            >
-              Delete Recipe
-            </button>
+            <DemoGuard action="Deleting recipes">
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full py-3 rounded-xl text-terracotta hover:bg-terracotta/10 transition-colors text-sm"
+              >
+                Delete Recipe
+              </button>
+            </DemoGuard>
           </div>
         </div>
       </div>

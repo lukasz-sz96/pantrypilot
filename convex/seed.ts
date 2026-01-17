@@ -493,3 +493,65 @@ export const copyTemplatesToUser = action({
   },
 })
 
+export const seedDemoUser = internalMutation({
+  args: { userId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { userId }) => {
+    const existingRecipes = await ctx.db
+      .query('recipes')
+      .withIndex('by_user', (q) => q.eq('userId', userId))
+      .first()
+
+    if (existingRecipes) {
+      console.log('Demo user already has data, skipping seed')
+      return null
+    }
+
+    const templates = await ctx.db.query('templateRecipes').collect()
+    for (const template of templates) {
+      await ctx.db.insert('recipes', {
+        userId,
+        title: template.title,
+        cooklangSource: template.cooklangSource,
+        parsedIngredients: template.parsedIngredients,
+        parsedSteps: template.parsedSteps,
+        servings: template.servings,
+        image: template.image,
+        category: template.category,
+        tags: template.tags,
+      })
+    }
+    console.log(`Seeded ${templates.length} recipes for demo user`)
+
+    const staples = await ctx.db
+      .query('ingredients')
+      .filter((q) => q.eq(q.field('isStaple'), true))
+      .collect()
+
+    for (const ingredient of staples.slice(0, 20)) {
+      await ctx.db.insert('pantryItems', {
+        userId,
+        ingredientId: ingredient._id,
+        quantity: Math.floor(Math.random() * 5) + 1,
+        unit: ingredient.defaultUnit,
+      })
+    }
+    console.log(`Seeded ${Math.min(staples.length, 20)} pantry items for demo user`)
+
+    const sampleIngredients = await ctx.db.query('ingredients').take(5)
+    await ctx.db.insert('shoppingLists', {
+      userId,
+      name: 'Weekly Groceries',
+      items: sampleIngredients.map((ing) => ({
+        ingredientId: ing._id,
+        quantity: 2,
+        unit: ing.defaultUnit,
+        checked: false,
+      })),
+    })
+    console.log('Created sample shopping list for demo user')
+
+    return null
+  },
+})
+

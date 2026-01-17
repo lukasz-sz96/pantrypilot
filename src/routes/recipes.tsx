@@ -7,6 +7,7 @@ import { parseCooklang, parseIngredientLine } from '../lib/cooklang'
 import { RecipeFilterSidebar } from '../components/RecipeFilterSidebar'
 import { RecipeFilterDrawer } from '../components/RecipeFilterDrawer'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { DemoGuard } from '~/components/DemoGuard'
 
 type IngredientMatch = {
   originalText: string
@@ -869,41 +870,43 @@ const IngredientMatchRow = ({
               </button>
             ))}
           </div>
-          <div className="border-t border-warmgray/10 pt-3">
-            <p className="text-xs text-warmgray mb-2">
-              Or create new ingredient:
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Name"
-                className="flex-1 px-3 py-2 rounded-lg border border-warmgray/20 text-sm focus:outline-none focus:ring-1 focus:ring-sage"
-              />
-              <select
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-warmgray/20 text-sm focus:outline-none focus:ring-1 focus:ring-sage"
+          <DemoGuard action="Creating ingredients">
+            <div className="border-t border-warmgray/10 pt-3">
+              <p className="text-xs text-warmgray mb-2">
+                Or create new ingredient:
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Name"
+                  className="flex-1 px-3 py-2 rounded-lg border border-warmgray/20 text-sm focus:outline-none focus:ring-1 focus:ring-sage"
+                />
+                <select
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-warmgray/20 text-sm focus:outline-none focus:ring-1 focus:ring-sage"
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={() => {
+                  onCreateNew(newName, newCategory)
+                  setExpanded(false)
+                }}
+                disabled={!newName.trim()}
+                className="w-full mt-2 py-2 rounded-lg bg-sage/10 text-sage-dark text-sm font-medium hover:bg-sage/20 transition-colors disabled:opacity-50"
               >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
+                Create "{newName}"
+              </button>
             </div>
-            <button
-              onClick={() => {
-                onCreateNew(newName, newCategory)
-                setExpanded(false)
-              }}
-              disabled={!newName.trim()}
-              className="w-full mt-2 py-2 rounded-lg bg-sage/10 text-sage-dark text-sm font-medium hover:bg-sage/20 transition-colors disabled:opacity-50"
-            >
-              Create "{newName}"
-            </button>
-          </div>
+          </DemoGuard>
         </div>
       )}
     </div>
@@ -1040,9 +1043,11 @@ const Recipes = () => {
       <header className="recipes-header">
         <div className="recipes-header-content">
           <h1 className="recipes-header-title">Recipes</h1>
-          <button onClick={() => setShowAddModal(true)} className="btn-primary">
-            + Add
-          </button>
+          <DemoGuard action="Adding recipes">
+            <button onClick={() => setShowAddModal(true)} className="btn-primary">
+              + Add
+            </button>
+          </DemoGuard>
         </div>
       </header>
 
@@ -1114,12 +1119,14 @@ const Recipes = () => {
               ) : (
                 <>
                   <p className="recipes-empty-text">No recipes yet.</p>
-                  <button
-                    onClick={() => setShowAddModal(true)}
-                    className="btn-primary"
-                  >
-                    Add your first recipe
-                  </button>
+                  <DemoGuard action="Adding recipes">
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="btn-primary"
+                    >
+                      Add your first recipe
+                    </button>
+                  </DemoGuard>
                 </>
               )}
             </div>

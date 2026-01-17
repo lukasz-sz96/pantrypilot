@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { useState } from 'react'
 import { UnitPicker } from '../components/UnitPicker'
+import { DemoGuard } from '~/components/DemoGuard'
 
 type PantryItem = {
   _id: Id<'pantryItems'>
@@ -174,15 +175,17 @@ const AddIngredientModal = ({ onClose }: { onClose: () => void }) => {
             {search && searchResults && searchResults.length === 0 && (
               <div className="text-center py-4">
                 <p className="text-warmgray mb-3">No ingredients found</p>
-                <button
-                  onClick={() => {
-                    setIsCreatingNew(true)
-                    setNewName(search)
-                  }}
-                  className="btn-primary"
-                >
-                  Create "{search}"
-                </button>
+                <DemoGuard action="Creating ingredients">
+                  <button
+                    onClick={() => {
+                      setIsCreatingNew(true)
+                      setNewName(search)
+                    }}
+                    className="btn-primary"
+                  >
+                    Create "{search}"
+                  </button>
+                </DemoGuard>
               </div>
             )}
           </div>
