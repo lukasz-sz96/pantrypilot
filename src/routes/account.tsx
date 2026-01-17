@@ -3,10 +3,13 @@ import { UserProfile, useAuth, useUser } from '@clerk/clerk-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { useState } from 'react'
+import { DemoGuard } from '~/components/DemoGuard'
+import { useDemoUser } from '~/hooks/useDemoUser'
 
 const AccountPage = () => {
   const { signOut } = useAuth()
   const { user } = useUser()
+  const { isDemoUser } = useDemoUser()
   const navigate = useNavigate()
   const deleteAllData = useMutation(api.users.deleteAllData)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -33,28 +36,46 @@ const AccountPage = () => {
       </header>
 
       <div className="content-section py-4 space-y-6">
-        <div className="card">
-          <UserProfile
-            appearance={{
-              elements: {
-                rootBox: 'w-full',
-                card: 'shadow-none p-0',
-                navbar: 'hidden',
-                pageScrollBox: 'p-0',
-                profileSection: 'border-cream-dark',
-                formButtonPrimary: 'bg-sage hover:bg-sage-dark',
-                formFieldInput:
-                  'rounded-xl border-warmgray/30 focus:border-sage focus:ring-sage',
-              },
-              variables: {
-                colorPrimary: '#7C9A82',
-                colorText: '#3D2F2A',
-                colorTextSecondary: '#9C8B82',
-                borderRadius: '0.75rem',
-              },
-            }}
-          />
-        </div>
+        {isDemoUser ? (
+          <div className="card space-y-4">
+            <h2 className="font-display text-lg text-espresso">Demo Account</h2>
+            <p className="text-warmgray">
+              You're using a demo account to explore PantryPilot. Account settings are disabled.
+            </p>
+            <div className="flex items-center gap-3 py-2">
+              <div className="w-12 h-12 rounded-full bg-sage/20 flex items-center justify-center text-sage font-medium text-lg">
+                {user?.firstName?.[0] || 'D'}
+              </div>
+              <div>
+                <div className="font-medium text-espresso">{user?.fullName || 'Demo User'}</div>
+                <div className="text-sm text-warmgray">{user?.primaryEmailAddress?.emailAddress}</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="card">
+            <UserProfile
+              appearance={{
+                elements: {
+                  rootBox: 'w-full',
+                  card: 'shadow-none p-0',
+                  navbar: 'hidden',
+                  pageScrollBox: 'p-0',
+                  profileSection: 'border-cream-dark',
+                  formButtonPrimary: 'bg-sage hover:bg-sage-dark',
+                  formFieldInput:
+                    'rounded-xl border-warmgray/30 focus:border-sage focus:ring-sage',
+                },
+                variables: {
+                  colorPrimary: '#7C9A82',
+                  colorText: '#3D2F2A',
+                  colorTextSecondary: '#9C8B82',
+                  borderRadius: '0.75rem',
+                },
+              }}
+            />
+          </div>
+        )}
 
         <div className="card space-y-4">
           <h2 className="font-display text-lg text-espresso">Danger Zone</h2>
@@ -66,12 +87,14 @@ const AccountPage = () => {
             Sign Out
           </button>
 
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-full py-3 rounded-xl text-terracotta border border-terracotta/30 hover:bg-terracotta/10 transition-colors"
-          >
-            Delete Account
-          </button>
+          <DemoGuard action="Deleting account">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full py-3 rounded-xl text-terracotta border border-terracotta/30 hover:bg-terracotta/10 transition-colors"
+            >
+              Delete Account
+            </button>
+          </DemoGuard>
         </div>
       </div>
 

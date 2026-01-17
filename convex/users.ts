@@ -1,5 +1,6 @@
 import { mutation } from './_generated/server'
 import { v } from 'convex/values'
+import { assertNotDemo } from './auth'
 
 export const deleteAllData = mutation({
   args: {},
@@ -7,6 +8,7 @@ export const deleteAllData = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) throw new Error('Not authenticated')
+    await assertNotDemo(ctx, 'Deleting account')
 
     const userId = identity.subject
 

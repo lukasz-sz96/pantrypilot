@@ -85,9 +85,8 @@ The home screen analyzes your pantry against your recipe collection and shows yo
 ### Prerequisites
 
 - Node.js 22+
-- Docker & Docker Compose (for deployment)
-- A [Convex](https://convex.dev) account
-- A [Clerk](https://clerk.com) account
+- [Convex](https://convex.dev) account (free tier or self-hosted)
+- [Clerk](https://clerk.com) account (free tier available)
 - (Optional) [OpenRouter](https://openrouter.ai) API key for AI recipe import
 
 ### Setup
@@ -105,21 +104,31 @@ The home screen analyzes your pantry against your recipe collection and shows yo
    npm install
    ```
 
-3. **Configure Convex**
+3. **Configure Clerk**
+   - Create a new Clerk application at [clerk.com](https://clerk.com)
+   - Enable Google OAuth (or other providers) in SSO Connections
+   - Create a JWT template: JWT Templates → Convex
+   - Copy the Issuer URL (e.g., `https://your-app.clerk.accounts.dev`)
+
+4. **Configure Convex**
 
    ```bash
    npx convex dev
    ```
 
-   This will prompt you to create a new Convex project.
+   This will prompt you to create a new Convex project and generate your `VITE_CONVEX_URL`.
 
-4. **Configure Clerk**
-   - Create a new Clerk application at [clerk.com](https://clerk.com)
-   - Enable Google OAuth (or other providers) in SSO Connections
-   - Create a Convex JWT template (JWT Templates → Convex)
-   - Copy the JWT issuer domain
+5. **Set Convex environment variables**
 
-5. **Set up environment variables**
+   In [Convex Dashboard](https://dashboard.convex.dev) → Settings → Environment Variables, add:
+
+   | Variable | Required | Description |
+   |----------|----------|-------------|
+   | `CLERK_JWT_ISSUER_DOMAIN` | Yes | Clerk JWT Issuer URL |
+   | `OPENROUTER_API_KEY` | No | For AI recipe import |
+   | `OPENROUTER_MODEL` | No | Defaults to `google/gemini-2.0-flash-001` |
+
+6. **Set up local environment**
 
    ```bash
    cp .env.example .env
@@ -130,11 +139,9 @@ The home screen analyzes your pantry against your recipe collection and shows yo
    ```env
    VITE_CONVEX_URL=https://your-deployment.convex.cloud
    VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-   CLERK_JWT_ISSUER_DOMAIN=https://your-app.clerk.accounts.dev
-   OPENROUTER_API_KEY=sk-or-...  # Optional, for AI recipe import
    ```
 
-6. **Run development server**
+7. **Run development server**
 
    ```bash
    npm run dev
@@ -144,13 +151,12 @@ The home screen analyzes your pantry against your recipe collection and shows yo
 
 ### Docker Deployment
 
-Uses [Convex Cloud](https://convex.dev) for the database (free tier available).
+Uses [Convex](https://convex.dev) for the backend (free tier or self-hosted).
 
 #### Prerequisites
 
-1. **Create Convex project**: Run `npx convex dev` locally, then `npx convex deploy`
-2. **Configure Clerk JWT**: In Clerk Dashboard → JWT Templates → Create "Convex" template
-3. **AI Recipe Import** (optional): Add `OPENROUTER_API_KEY` in Convex Dashboard → Settings → Environment Variables
+1. Complete the setup steps above (Convex project + Clerk configuration)
+2. Deploy Convex: `npx convex deploy`
 
 #### Quick Start
 

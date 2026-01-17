@@ -420,7 +420,7 @@ async function generateTags(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+          model: process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001',
           messages: [{ role: 'user', content: prompt }],
           max_tokens: 500,
         }),
@@ -511,7 +511,7 @@ export const importFromUrl = action({
             },
             body: JSON.stringify({
               model:
-                process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet',
+                process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001',
               messages: [
                 {
                   role: 'user',
