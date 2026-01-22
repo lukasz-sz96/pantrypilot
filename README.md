@@ -197,4 +197,4 @@ Add container with:
 
 ## License
 
-MIT
+GPL v3
